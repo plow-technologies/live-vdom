@@ -2,7 +2,7 @@ Name:                   shakespeare-dynamic
 Version:                0.0.1
 Author:                 Scott <scottmurphy09@gmail.com>
 Maintainer:             Scott <scottmurphy09@gmail.com>
-License:                BSD3
+License:                MIT
 License-File:           LICENSE
 -- Synopsis:               
 -- Description:            
