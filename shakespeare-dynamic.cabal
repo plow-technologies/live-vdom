@@ -9,6 +9,11 @@ License-File:           LICENSE
 Cabal-Version:          >= 1.10
 Build-Type:             Simple
 
+flag build-example
+  description: build the example program
+  default: False
+  manual: True
+
 Library
   Default-Language:     Haskell2010
   HS-Source-Dirs:       src
@@ -22,6 +27,21 @@ Library
                       , ghcjs-base 
                       , ghcjs-dom
 
+
+
+executable example
+  if !flag(build-example)
+      buildable: False
+  Main-Is:        ShakespeareExample.hs
+  cpp-options: -DGHCJS_NO_CATCH_MAINLOOP
+  Default-Language: Haskell2010
+  hs-source-dirs: example
+  Build-Depends:  base                >= 4    &&  < 5,
+                  ghcjs-ffiqq,
+                  ghcjs-vdom,
+                  containers,
+                  ghcjs-base
+  ghcjs-Options:    -O -Wall
 
 Test-Suite spec
   Type:                 exitcode-stdio-1.0

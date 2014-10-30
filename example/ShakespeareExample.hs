@@ -98,8 +98,19 @@ animate n r s =
   let s' = step s
       r' = render s'
       p  = diff r r'
---  in  s' `seq` redraw n p >> threadDelay 20000 >> animate n r' s' -- for async calculation, sync repaint
-  in atAnimationFrame (patch n p >> animate n r' s') -- sync all
+  in  s' `seq` redraw n p >> threadDelay (2*1000*1000) >> animate n r' s' -- for async calculation, sync repaint
+--  in atAnimationFrame (patch n p >> animate n r' s') -- sync all
+
+oneFrameAnimate :: DOMNode -> VNode ->  IO ()
+oneFrameAnimate n r = do
+  let p = diff r exampleNode
+  redraw n p 
+ where
+   exampleNode = exNode
+
+exNode = js_vnode ( "cowboy") noProps (mkChildren [(text "powerd"  )])
+
+
 
 redraw :: DOMNode -> Patch -> IO ()
 redraw node p = p `seq` atAnimationFrame (patch node p)
@@ -110,11 +121,24 @@ atAnimationFrame m = do
     syncCallback AlwaysRetain False (release cb >> m)
   [js_| window.requestAnimationFrame(`cb); |]
 
+
+
+
+-- | Original main
+-- main :: IO ()
+-- main = do
+--   root <- [js| document.createElement('div') |]
+--   [js_| document.body.appendChild(`root); |]
+--   let s = mkState 167 101 10 20
+--   animate root emptyDiv s
+
+
+
+
 main :: IO ()
 main = do
   root <- [js| document.createElement('div') |]
   [js_| document.body.appendChild(`root); |]
   let s = mkState 167 101 10 20
-  animate root emptyDiv s
-
+  oneFrameAnimate root emptyDiv
 
