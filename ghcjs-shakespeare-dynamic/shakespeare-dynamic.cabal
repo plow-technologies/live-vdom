@@ -19,8 +19,12 @@ Library
   HS-Source-Dirs:       src
   GHC-Options:          -Wall
   Exposed-Modules:      Shakespeare.Dynamic
+                        Shakespeare.Dynamic.Opheilia.Parser
   Other-Modules:        Shakespeare.Dynamic.Internal
   Build-Depends:        base >= 4 && < 5
+                      , template-haskell
+                      , containers
+                      , parsec
                       , shakespeare == 2.0.1.7569
                       , ghcjs-vdom
                       , ghcjs-ffiqq
@@ -40,6 +44,7 @@ executable example
                   ghcjs-ffiqq,
                   ghcjs-vdom,
                   containers,
+                  template-haskell,
                   ghcjs-base
   ghcjs-Options:    -O -Wall
 
