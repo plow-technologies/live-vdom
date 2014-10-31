@@ -1,5 +1,5 @@
 Name:                   shakespeare-dynamic-opheilia
-Version:                0.0.0
+Version:                0.0.1
 Author:                 Scott <scott.murphy@plowtech.net>
 Maintainer:             Scott <scott.murphy@plowtech.net>
 License:                BSD3
@@ -14,8 +14,13 @@ Library
   HS-Source-Dirs:       src
   GHC-Options:          -Wall
   Exposed-Modules:      Shakespeare.Dynamic.Opheilia
+                        Shakespeare.Dynamic.Opheilia.Parser
   Other-Modules:        Shakespeare.Dynamic.Opheilia.Internal
   Build-Depends:        base >= 4 && < 5
+                       ,containers
+                       ,shakespeare
+                       ,parsec  
+                       ,template-haskell
 
 Test-Suite spec
   Type:                 exitcode-stdio-1.0
@@ -26,6 +31,11 @@ Test-Suite spec
   Main-Is:              Spec.hs
   Build-Depends:        base
                       , hspec
+                      , containers
+                      , shakespeare
+                      , parsec  
+                      , here
+                      , template-haskell
 
 Source-Repository head
   Type:                 git
