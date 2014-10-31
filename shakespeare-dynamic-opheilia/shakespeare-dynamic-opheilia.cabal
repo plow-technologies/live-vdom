@@ -1,0 +1,32 @@
+Name:                   shakespeare-dynamic-opheilia
+Version:                0.0.0
+Author:                 Scott <scott.murphy@plowtech.net>
+Maintainer:             Scott <scott.murphy@plowtech.net>
+License:                BSD3
+License-File:           LICENSE
+-- Synopsis:               
+-- Description:            
+Cabal-Version:          >= 1.10
+Build-Type:             Simple
+
+Library
+  Default-Language:     Haskell2010
+  HS-Source-Dirs:       src
+  GHC-Options:          -Wall
+  Exposed-Modules:      Shakespeare.Dynamic.Opheilia
+  Other-Modules:        Shakespeare.Dynamic.Opheilia.Internal
+  Build-Depends:        base >= 4 && < 5
+
+Test-Suite spec
+  Type:                 exitcode-stdio-1.0
+  Default-Language:     Haskell2010
+  Hs-Source-Dirs:       src
+                      , test
+  Ghc-Options:          -Wall
+  Main-Is:              Spec.hs
+  Build-Depends:        base
+                      , hspec
+
+Source-Repository head
+  Type:                 git
+--  Location:             
