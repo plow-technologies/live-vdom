@@ -21,6 +21,7 @@ Library
                        ,shakespeare
                        ,parsec  
                        ,template-haskell
+                       ,transformers
 
 Test-Suite spec
   Type:                 exitcode-stdio-1.0
@@ -36,6 +37,7 @@ Test-Suite spec
                       , parsec  
                       , here
                       , template-haskell
+                      , transformers
 
 Source-Repository head
   Type:                 git
