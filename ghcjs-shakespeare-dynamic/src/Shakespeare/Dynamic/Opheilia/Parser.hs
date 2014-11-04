@@ -2,6 +2,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleInstances #-}
+
 module Shakespeare.Dynamic.Opheilia.Parser
     ( Result (..)
     , Content (..)

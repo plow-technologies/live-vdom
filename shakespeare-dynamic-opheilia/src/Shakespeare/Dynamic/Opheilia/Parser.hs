@@ -98,13 +98,14 @@ parseLines set s =
         res <- many (parseLine set')
         return (mnewline, set', res)
 
-    parseNewline =
-        (try (many eol' >> spaceTabs >> string "$newline ") >> parseNewline' >>= \nl -> eol' >> return nl) <|>
-        return Nothing
-    parseNewline' =
-        (try (string "always") >> return (Just AlwaysNewlines)) <|>
-        (try (string "never") >> return (Just NoNewlines)) <|>
-        (try (string "text") >> return (Just NewlinesText))
+parseNewline :: ParsecT [Char] () Identity (Maybe NewlineStyle)
+parseNewline =
+    (try (many eol' >> spaceTabs >> string "$newline ") >> parseNewline' >>= \nl -> eol' >> return nl) <|>
+    return Nothing
+parseNewline' =
+    (try (string "always") >> return (Just AlwaysNewlines)) <|>
+    (try (string "never") >> return (Just NoNewlines)) <|>
+    (try (string "text") >> return (Just NewlinesText))
 
 
 parseLine :: HamletSettings -> Parser (Int, Line)
