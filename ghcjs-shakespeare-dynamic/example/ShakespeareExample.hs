@@ -25,6 +25,10 @@ import           GHCJS.Foreign
 import           GHCJS.Foreign.QQ
 import           GHCJS.Types
 
+import           Shakespeare.Dynamic.Adapter
+
+import           VDOM.Adapter
+
 import Control.Arrow
 
 
@@ -106,10 +110,11 @@ oneFrameAnimate n r = do
   let p = diff r exampleNode
   redraw n p 
  where
-   exampleNode = exNode
+   exampleNode = exNode2
 
 exNode = js_vnode ( "cowboy") noProps (mkChildren [(text "powerd"  )])
 
+exNode2 = toVNode exampleVNode
 
 
 redraw :: DOMNode -> Patch -> IO ()
@@ -142,3 +147,17 @@ main = do
   let s = mkState 167 101 10 20
   oneFrameAnimate root emptyDiv
 
+
+exampleVNode :: VNodeAdapter
+exampleVNode = VNodeAdapter "h1" "internal1" [] [emptyDiv,emptyDiv2,buttonTag] 
+  where emptyDiv = VNodeAdapter "div" "Internal2" [] []
+        emptyDiv2 = VNodeAdapter "div" "" [] []
+        buttonTag = VNodeAdapter "button" "Button Thing!" [buttonProp] []
+        buttonProp = Property "type" $ JSPText "button"
+        buttonId = Property "id" $ JSPText "abuttonid!"
+
+
+--  Should render to be like:
+--  <h1>
+--    <div>
+--    <button type="button">

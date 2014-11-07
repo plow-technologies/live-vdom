@@ -7,7 +7,6 @@ module VDOM.Adapter.Types where
 import Data.Int
 import Data.Word
 import Data.Text
-import Data.Aeson
 
 data Property = Property {
   propertyName :: String
@@ -17,6 +16,7 @@ data Property = Property {
 
 data VNodeAdapter = VNodeAdapter {
   vNodeAdapterTagName :: String
+, vNodeAdapterInnerText :: String
 , vNodeAdapterProps :: [Property]
 , vNodeAdapterChildren :: [VNodeAdapter]
 }
@@ -33,14 +33,6 @@ data JSProp = JSPBool Bool
             | JSPWord32 Word32 
             | JSPFloat Float  
             | JSPDouble Double 
-            | JSPValue Value
-            | JSPList [JSProp]
-            | JSPMaybe (Maybe JSProp)
-            | JSPT2 (JSProp, JSProp)
-            | JSPT3 (JSProp, JSProp, JSProp)
-            | JSPT4 (JSProp, JSProp, JSProp, JSProp)
-            | JSPT5 (JSProp, JSProp, JSProp, JSProp, JSProp)
-            | JSPT6 (JSProp, JSProp, JSProp, JSProp, JSProp, JSProp)
 
 -- instance ToJSRef JSProp where
 --   toJSRef (JSPText t) = toJSRef t
@@ -66,13 +58,13 @@ data JSProp = JSPBool Bool
 
 
 test :: VNodeAdapter
-test = VNodeAdapter "h1" [] [emptyDiv,buttonTag]
-  where emptyDiv = VNodeAdapter "div" [] []
-        buttonTag = VNodeAdapter "button" [buttonProp] []
+test = VNodeAdapter "h1" "" [] [emptyDiv,buttonTag] 
+  where emptyDiv = VNodeAdapter "div" "" [] []
+        buttonTag = VNodeAdapter "button" "Button Thing!" [buttonProp] []
         buttonProp = Property "type" $ JSPText "button"
 
 
 --  Should render to be like:
 --  <h1>
 --    <div>
---    <button type="button"
+--    <button type="button">Button Thing!
