@@ -157,7 +157,11 @@ exampleVNode = VNodeAdapter "h1" "internal1" [] [emptyDiv,emptyDiv2,buttonTag]
         buttonId = Property "id" $ JSPText "abuttonid!"
 
 
---  Should render to be like:
---  <h1>
---    <div>
---    <button type="button">
+-- This example should render:
+ --  <h1>
+ --    internal1
+ --    <div>Internal2</div>
+ --    <div></div>
+ --    <button type="button" id="abuttonid!">Button Thing!</button>
+ --  </h1>
+--
