@@ -17,8 +17,11 @@ import Data.Foldable
 import System.IO.Unsafe (unsafePerformIO)
 
 
--- The orphan instance is to seerace the GHCJS dependency
+-- The orphan instance is to seperate the GHCJS dependency
 -- from the JSProp definition
+-- This just pushes the data into a JSRef and then casts
+-- it back to the correct type so that
+-- toJSRef :: JSProp -> IO (JSRef JSProp)
 instance ToJSRef JSProp where
   toJSRef (JSPText t) = castToJSRef t
   toJSRef (JSPBool b) = castToJSRef b
@@ -34,23 +37,30 @@ instance ToJSRef JSProp where
   toJSRef (JSPDouble d) = castToJSRef d
 
 -- Push a piece of data into a JSRef and cast it
+castToJSRef :: ToJSRef a => a -> IO (JSRef b)
 castToJSRef x = castRef <$> toJSRef x
 
 
+-- Newtype to wrap the [Property] so that 
 newtype PropList = PropList { unPropList :: [Property]}
+
+-- The orphan instance is again to seperate the GHCJS dependency
+-- from the definition of property
 instance ToJSRef (PropList) where
   toJSRef (PropList xs) = do
     x <- newObj
-    foldlM update x xs
+    foldlM insert x xs
     return x
     where
-      update x (Property name value) = do
+      -- VDom uses the property object like a Map from name to value
+      -- So we create a map for vdom to access
+      insert x (Property name value) = do 
         val <- toJSRef value
         setProp name val x
         return x
 
 
-
+-- Convert a VNodeAdapter to a VNode in order to diff it with vdom
 toVNode :: VNodeAdapter -> VNode
 toVNode (VNodeAdapter aTagName innerText aProps aChildren) = js_vnode tagName props $ mChildren aChildren
   where tagName = toJSString aTagName
