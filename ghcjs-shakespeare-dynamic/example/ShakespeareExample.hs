@@ -152,7 +152,7 @@ exampleVNode :: VNodeAdapter
 exampleVNode = VNodeAdapter "h1" "internal1" [] [emptyDiv,emptyDiv2,buttonTag] 
   where emptyDiv = VNodeAdapter "div" "Internal2" [] []
         emptyDiv2 = VNodeAdapter "div" "" [] []
-        buttonTag = VNodeAdapter "button" "Button Thing!" [buttonProp] []
+        buttonTag = VNodeAdapter "button" "Button Thing!" [buttonProp, buttonId] []
         buttonProp = Property "type" $ JSPText "button"
         buttonId = Property "id" $ JSPText "abuttonid!"
 
