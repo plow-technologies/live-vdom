@@ -2,6 +2,7 @@ module Shakespeare.Dynamic.Adapter where
 
 import           Control.Applicative
 import           Data.Text
+import           Data.Foldable
 
 import           Data.Aeson
 
@@ -12,9 +13,8 @@ import           GHCJS.Marshal
 import           GHCJS.PureMarshal
 import           GHCJS.Types
 import           GHCJS.VDOM
-import           Unsafe.Coerce       (unsafeCoerce)
-import Data.Foldable
-import System.IO.Unsafe (unsafePerformIO)
+
+import           System.IO.Unsafe    (unsafePerformIO)
 
 
 -- The orphan instance is to seperate the GHCJS dependency
@@ -41,7 +41,7 @@ castToJSRef :: ToJSRef a => a -> IO (JSRef b)
 castToJSRef x = castRef <$> toJSRef x
 
 
--- Newtype to wrap the [Property] so that 
+-- Newtype to wrap the [Property] so that
 newtype PropList = PropList { unPropList :: [Property]}
 
 -- The orphan instance is again to seperate the GHCJS dependency
@@ -54,7 +54,7 @@ instance ToJSRef (PropList) where
     where
       -- VDom uses the property object like a Map from name to value
       -- So we create a map for vdom to access
-      insert x (Property name value) = do 
+      insert x (Property name value) = do
         val <- toJSRef value
         setProp name val x
         return x

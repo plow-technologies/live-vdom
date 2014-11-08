@@ -1,28 +1,19 @@
-hi-hspec
+Shakespeare Dynamic
 =================
 
-A template for [hi](https://github.com/fujimura/hi).
+The idea for shakespeare dynamic is to be able to write templates similar to hamlet and then transform them to vdom in order to use the Javascript [vdom library](https://github.com/Matt-Esch/vdom)
 
-example:
+GHCJS Shakespeare dynamic
+====
 
-```
-$ hi -m Foo.Bar -p foo-bar  -r git@github.com:fujimura/hi-hspec.git
-$ tree
-.
-├── LICENSE
-├── README.md
-├── foo-bar.cabal
-├── src
-│   └── Foo
-│       ├── Bar
-│       │   └── Internal.hs
-│       └── Bar.hs
-└── test
-    ├── Foo
-    │   └── BarSpec.hs
-    └── Spec.hs
+Be able to convert the "pure" templated html into ghcjs-vdom types
 
-5 directories, 7 files
-```
+Shakespeare Dynamic Opheilia
+====
 
-Copyright 2013-2014 Fujimura Daisuke, under the MIT license.
+Similar templating to hamlet that you can run without needing to use ghcjs
+
+VDom adapter
+====
+
+Types to convert from opheilia templates to VDom
