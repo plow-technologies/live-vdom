@@ -135,7 +135,7 @@ toVNode (VNodeAdapter aTagName innerText aProps aChildren) = js_vnode tagName pr
         mChildren xs = mkChildren $ (text $ toJSString innerText): (toVNode <$> aChildren)
 
 
-fromVNode :: VNode -> IO VNodeAdapter
-fromVNode vnode = undefined
+fromVNode :: VNode -> IO (Maybe VNodeAdapter)
+fromVNode (VNode vnode) = fromJSRef (castRef vnode)
 
 
