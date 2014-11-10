@@ -1,8 +1,12 @@
 module Shakespeare.Dynamic.Adapter where
 
 import           Control.Applicative
-import           Data.Text
+import           Control.Monad
 import           Data.Foldable
+import           Data.Maybe
+import           Data.Text           hiding (find)
+import qualified Data.Traversable    as TR
+import           Safe
 
 import           Data.Aeson
 
@@ -36,9 +40,30 @@ instance ToJSRef JSProp where
   toJSRef (JSPFloat f) = castToJSRef f
   toJSRef (JSPDouble d) = castToJSRef d
 
+
 -- Push a piece of data into a JSRef and cast it
 castToJSRef :: ToJSRef a => a -> IO (JSRef b)
 castToJSRef x = castRef <$> toJSRef x
+
+
+instance FromJSRef JSProp where
+  fromJSRef jspPointer = do
+    let parseJSP :: JSRef a -> [IO (Maybe JSProp)]
+        parseJSP jsp = [ convTo JSPText jsp
+                        ,convTo JSPBool jsp
+                        ,convTo JSPInt jsp
+                        ,convTo JSPInt8 jsp
+                        ,convTo JSPInt16 jsp
+                        ,convTo JSPWord jsp
+                        ,convTo JSPWord8 jsp
+                        ,convTo JSPWord16 jsp
+                        ,convTo JSPWord32 jsp
+                        ,convTo JSPFloat jsp
+                        ,convTo JSPDouble jsp
+                        ]
+        convTo constructor js = (fmap . fmap) constructor $ fromJSRef $ castRef js
+    possibleParsed <- TR.sequence $ parseJSP jspPointer
+    return . join $ find isJust possibleParsed
 
 
 -- Newtype to wrap the [Property] so that
@@ -67,4 +92,9 @@ toVNode (VNodeAdapter aTagName innerText aProps aChildren) = js_vnode tagName pr
         props = toProperties . castRef . unsafePerformIO . toJSRef $ PropList aProps
         mChildren [] = mkChildren [text $ toJSString innerText]
         mChildren xs = mkChildren $ (text $ toJSString innerText): (toVNode <$> aChildren)
+
+
+fromVNode :: VNode -> IO VNodeAdapter
+fromVNode vnode = undefined
+
 

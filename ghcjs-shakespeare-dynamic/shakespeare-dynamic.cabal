@@ -33,6 +33,7 @@ Library
                       , vdom-adapter
                       , text
                       , aeson
+                      , safe
 
 
 
