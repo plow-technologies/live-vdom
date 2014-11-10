@@ -67,7 +67,7 @@ instance FromJSRef JSProp where
 
 
 -- Newtype to wrap the [Property] so that
-newtype PropList = PropList { unPropList :: [Property]}
+newtype PropList = PropList { unPropList :: [Property]} deriving (Show)
 
 
 instance FromJSRef PropList where
@@ -85,8 +85,14 @@ instance FromJSRef VNodeAdapter where
     children <- safeGetProp "children" jsp
     properties <- safeGetProp "properties" jsp
     tagName <- safeGetProp "tagName" jsp
+    printWith "children" children
+    printWith "Props" properties
+    printWith "tagName" tagName
     return $ VNodeAdapter <$> tagName <*> (Just "") <*> (unPropList <$> properties) <*> children
 
+
+printWith :: Show a => String -> a -> IO ()
+printWith name a = putStr (name ++ ": ") >> print a
 
 safeGetProp :: (FromJSRef c) => ToJSString a => a -> JSRef b -> IO (Maybe c)
 safeGetProp name jsp = do

@@ -11,7 +11,7 @@ import Data.Text
 data Property = Property {
   propertyName :: String
 , propertyValue :: JSProp
-}
+} deriving (Show)
 
 
 data VNodeAdapter = VNodeAdapter {
@@ -19,7 +19,7 @@ data VNodeAdapter = VNodeAdapter {
 , vNodeAdapterInnerText :: String
 , vNodeAdapterProps :: [Property]
 , vNodeAdapterChildren :: [VNodeAdapter]
-}
+} deriving (Show)
 
 data JSProp = JSPBool Bool
             | JSPText Text
@@ -33,28 +33,7 @@ data JSProp = JSPBool Bool
             | JSPWord32 Word32 
             | JSPFloat Float  
             | JSPDouble Double 
-
--- instance ToJSRef JSProp where
---   toJSRef (JSPText t) = toJSRef t
---   toJSRef (JSPBool b) = toJSRef b
---   toJSRef (JSPInt i) = toJSRef i
---   toJSRef (JSPInt8 i8) = toJSRef i8
---   toJSRef (JSPInt8 i16) = toJSRef i16
---   toJSRef (JSPInt8 i32) = toJSRef i32
---   toJSRef (JSPWord w) = toJSRef w
---   toJSRef (JSPWord8 w8)  = toJSRef w8
---   toJSRef (JSPWord16 w16)  = toJSRef w16
---   toJSRef (JSPWord32 w32) = toJSRef w32
---   toJSRef (JSPFloat f) = toJSRef f
---   toJSRef (JSPDouble d) = toJSRef d
---   toJSRef (JSPValue v) = toJSRef v
---   toJSRef (JSPList xs) = toJSRef xs
---   toJSRef (JSPMaybe mJSPr)  = toJSRef mJSPr
---   toJSRef (JSPT2 (a, b)) = toJSRef (a,b)
---   toJSRef (JSPT3 (a, b, c)) = toJSRef (a,b,c)
---   toJSRef (JSPT4 (a, b, c, d)) = toJSRef (a,b,c,d)
---   toJSRef (JSPT5 (a, b, c, d, e)) = toJSRef (a,b,c,d,e)
---   toJSRef (JSPT6 (a, b, c, d, e, f)) = toJSRef (a,b,c,d,e,f)
+    deriving (Show)
 
 
 test :: VNodeAdapter

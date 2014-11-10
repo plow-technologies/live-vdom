@@ -1,7 +1,8 @@
-{-# LANGUAGE QuasiQuotes, OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes       #-}
 
 {-
-  Straight stolt on from virtual-dom 
+  Straight stolt on from virtual-dom
   virtual-dom bindings demo, rendering a large pixel grid with a bouncing red
   square. the step and patch are calculated asynchronously, the update is
   batched in an animation frame
@@ -11,25 +12,27 @@
 module Main where
 
 
-import           Prelude hiding (div)
+import           Control.Applicative
 import           Control.Concurrent
-import           Data.IntMap (IntMap)
-import qualified Data.IntMap as IM
+import           Data.IntMap                 (IntMap)
+import qualified Data.IntMap                 as IM
+import           Data.Maybe
+import           Prelude                     hiding (div)
 
 
 import           System.IO
 
-import           GHCJS.VDOM
-import           GHCJS.VDOM.QQ
 import           GHCJS.Foreign
 import           GHCJS.Foreign.QQ
 import           GHCJS.Types
+import           GHCJS.VDOM
+import           GHCJS.VDOM.QQ
 
 import           Shakespeare.Dynamic.Adapter
 
 import           VDOM.Adapter
 
-import Control.Arrow
+import           Control.Arrow
 
 
 red :: JSString
@@ -107,14 +110,17 @@ animate n r s =
 
 oneFrameAnimate :: DOMNode -> VNode ->  IO ()
 oneFrameAnimate n r = do
-  let p = diff r exampleNode
-  redraw n p 
+  node <- exNode3
+  let p = diff r $ toVNode node
+  redraw n p
  where
    exampleNode = exNode2
 
 exNode = js_vnode ( "cowboy") noProps (mkChildren [(text "powerd"  )])
 
 exNode2 = toVNode exampleVNode
+
+exNode3 = (fromMaybe failedNode <$> convertMVnode)
 
 
 redraw :: DOMNode -> Patch -> IO ()
@@ -149,13 +155,19 @@ main = do
 
 
 exampleVNode :: VNodeAdapter
-exampleVNode = VNodeAdapter "h1" "internal1" [] [emptyDiv,emptyDiv2,buttonTag] 
+exampleVNode = VNodeAdapter "h1" "internal1" [] [emptyDiv,emptyDiv2,buttonTag]
   where emptyDiv = VNodeAdapter "div" "Internal2" [] []
         emptyDiv2 = VNodeAdapter "div" "" [] []
         buttonTag = VNodeAdapter "button" "Button Thing!" [buttonProp, buttonId] []
         buttonProp = Property "type" $ JSPText "button"
         buttonId = Property "id" $ JSPText "abuttonid!"
 
+failedNode :: VNodeAdapter
+failedNode = VNodeAdapter "h2" "failed" [] []
+
+convertMVnode :: IO (Maybe VNodeAdapter)
+convertMVnode = fromVNode vn
+  where vn = toVNode exampleVNode
 
 -- This example should render:
  --  <h1>
