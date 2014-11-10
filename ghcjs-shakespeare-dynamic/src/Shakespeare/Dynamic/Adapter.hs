@@ -79,6 +79,22 @@ instance FromJSRef PropList where
     let props = mkPropsList propNames jsProps
     return . Just . PropList $ props
 
+
+instance FromJSRef VNodeAdapter where
+  fromJSRef jsp = do
+    children <- safeGetProp "children" jsp
+    properties <- safeGetProp "properties" jsp
+    tagName <- safeGetProp "tagName" jsp
+    return $ VNodeAdapter <$> tagName <*> (Just "") <*> (unPropList <$> properties) <*> children
+
+
+safeGetProp :: (FromJSRef c) => ToJSString a => a -> JSRef b -> IO (Maybe c)
+safeGetProp name jsp = do
+  prop <- getPropMaybe name jsp
+  mJSRef <- TR.sequence $ fromJSRef <$> prop
+  return $ join mJSRef
+
+
 mkPropsList :: [JSString] -> [Maybe JSProp] -> [Property]
 mkPropsList propNames props = catMaybes $ zipWith mkProp propNames props
 
