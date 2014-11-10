@@ -4,7 +4,7 @@ import           Control.Applicative
 import           Control.Monad
 import           Data.Foldable
 import           Data.Maybe
-import           Data.Text           hiding (find)
+import           Data.Text           hiding (find, zipWith, map)
 import qualified Data.Traversable    as TR
 import           Safe
 
@@ -68,6 +68,31 @@ instance FromJSRef JSProp where
 
 -- Newtype to wrap the [Property] so that
 newtype PropList = PropList { unPropList :: [Property]}
+
+
+instance FromJSRef PropList where
+  fromJSRef jsp = do
+    propNames <- jsPropNames jsp 
+    jsProps <- TR.traverse (\pName -> getProp pName jsp >>= fromJSRef) propNames --Shouldn't throw an exception because
+                                            -- all values in proplist should exist because
+                                            -- they of the listProps
+    let props = mkPropsList propNames jsProps
+    return . Just . PropList $ props
+
+mkPropsList :: [JSString] -> [Maybe JSProp] -> [Property]
+mkPropsList propNames props = catMaybes $ zipWith mkProp propNames props
+
+mkProp :: JSString -> Maybe JSProp -> Maybe Property
+mkProp name (Just prop) = Just $ Property (fromJSString name) prop
+mkProp _ _ = Nothing
+
+jsPropNames :: JSRef a -> IO [JSString]
+jsPropNames js = do
+  ioPropRefs <- listProps js
+  mProps <- TR.traverse fromJSRef ioPropRefs
+  return $ catMaybes mProps
+
+
 
 -- The orphan instance is again to seperate the GHCJS dependency
 -- from the definition of property
