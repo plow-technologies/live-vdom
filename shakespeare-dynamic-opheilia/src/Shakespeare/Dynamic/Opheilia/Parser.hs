@@ -438,6 +438,7 @@ isConstructor (Ident []) = error "isConstructor: bad identifier"
 identPattern :: Parser Binding
 identPattern = gcon True <|> apat
 
+apat :: ParsecT String () Identity Binding
 apat = choice
   [ varpat
   , gcon False
@@ -445,6 +446,7 @@ apat = choice
   , brackets listpat
   ]
 
+varpat :: ParsecT String () Identity Binding
 varpat = do
   v <- try $ do v <- ident
                 guard (isVariable v)
@@ -466,11 +468,13 @@ gcon allowArgs = do
     ]
  <?> "constructor"
 
+dataConstr :: ParsecT String () Identity DataConstr
 dataConstr = do
   p <- dcPiece
   ps <- many dcPieces
   return $ toDataConstr p ps
 
+dcPieces :: ParsecT String () Identity String
 dcPiece = do
   x@(Ident y) <- ident
   guard $ isConstructor x
@@ -487,6 +491,7 @@ toDataConstr x (y:ys) =
     go front next [] = DCQualified (Module $ front []) (Ident next)
     go front next (rest:rests) = go (front . (next:)) rest rests
 
+record :: DataConstr -> ParsecT String () Identity Binding
 record c = braces $ do
   (fields, wild) <- option ([], False) $ go
   return (BindRecord c fields wild)
@@ -496,6 +501,7 @@ record c = braces $ do
              (xs,wild) <- option ([],False) (comma >> go)
              return (x:xs,wild))
 
+recordField :: ParsecT String () Identity (Ident, Binding)
 recordField = do
   field <- ident
   p <- option (BindVar field) -- support punning
@@ -511,7 +517,7 @@ tuplepat = do
 listpat :: ParsecT String () Identity Binding
 listpat = BindList <$> identPattern `sepBy` comma
 
-angle :: ParsecT [Char] u Identity Line
+angle :: ParsecT String u Identity Line
 angle = do
     _ <- char '<'
     name' <- many  $ noneOf " \t.#\r\n!>"
