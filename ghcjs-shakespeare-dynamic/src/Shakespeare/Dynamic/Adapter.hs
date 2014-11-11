@@ -46,74 +46,9 @@ castToJSRef :: ToJSRef a => a -> IO (JSRef b)
 castToJSRef x = castRef <$> toJSRef x
 
 
-instance FromJSRef JSProp where
-  fromJSRef jspPointer = do
-    let parseJSP :: JSRef a -> [IO (Maybe JSProp)]
-        parseJSP jsp = [ convTo JSPText jsp
-                        ,convTo JSPBool jsp
-                        ,convTo JSPInt jsp
-                        ,convTo JSPInt8 jsp
-                        ,convTo JSPInt16 jsp
-                        ,convTo JSPWord jsp
-                        ,convTo JSPWord8 jsp
-                        ,convTo JSPWord16 jsp
-                        ,convTo JSPWord32 jsp
-                        ,convTo JSPFloat jsp
-                        ,convTo JSPDouble jsp
-                        ]
-        convTo constructor js = (fmap . fmap) constructor $ fromJSRef $ castRef js
-    possibleParsed <- TR.sequence $ parseJSP jspPointer
-    return . join $ find isJust possibleParsed
-
 
 -- Newtype to wrap the [Property] so that
 newtype PropList = PropList { unPropList :: [Property]} deriving (Show)
-
-
-instance FromJSRef PropList where
-  fromJSRef jsp = do
-    propNames <- jsPropNames jsp 
-    jsProps <- TR.traverse (\pName -> getProp pName jsp >>= fromJSRef) propNames --Shouldn't throw an exception because
-                                            -- all values in proplist should exist because
-                                            -- they of the listProps
-    let props = mkPropsList propNames jsProps
-    return . Just . PropList $ props
-
-
-instance FromJSRef VNodeAdapter where
-  fromJSRef jsp = do
-    children <- safeGetProp "children" jsp
-    properties <- safeGetProp "properties" jsp
-    tagName <- safeGetProp "tagName" jsp
-    printWith "children" children
-    printWith "Props" properties
-    printWith "tagName" tagName
-    return $ VNodeAdapter <$> tagName <*> (Just "") <*> (unPropList <$> properties) <*> children
-
-
-printWith :: Show a => String -> a -> IO ()
-printWith name a = putStr (name ++ ": ") >> print a
-
-safeGetProp :: (FromJSRef c) => ToJSString a => a -> JSRef b -> IO (Maybe c)
-safeGetProp name jsp = do
-  prop <- getPropMaybe name jsp
-  mJSRef <- TR.sequence $ fromJSRef <$> prop
-  return $ join mJSRef
-
-
-mkPropsList :: [JSString] -> [Maybe JSProp] -> [Property]
-mkPropsList propNames props = catMaybes $ zipWith mkProp propNames props
-
-mkProp :: JSString -> Maybe JSProp -> Maybe Property
-mkProp name (Just prop) = Just $ Property (fromJSString name) prop
-mkProp _ _ = Nothing
-
-jsPropNames :: JSRef a -> IO [JSString]
-jsPropNames js = do
-  ioPropRefs <- listProps js
-  mProps <- TR.traverse fromJSRef ioPropRefs
-  return $ catMaybes mProps
-
 
 
 -- The orphan instance is again to seperate the GHCJS dependency
@@ -139,9 +74,4 @@ toVNode (VNodeAdapter aTagName innerText aProps aChildren) = js_vnode tagName pr
         props = toProperties . castRef . unsafePerformIO . toJSRef $ PropList aProps
         mChildren [] = mkChildren [text $ toJSString innerText]
         mChildren xs = mkChildren $ (text $ toJSString innerText): (toVNode <$> aChildren)
-
-
-fromVNode :: VNode -> IO (Maybe VNodeAdapter)
-fromVNode (VNode vnode) = fromJSRef (castRef vnode)
-
 

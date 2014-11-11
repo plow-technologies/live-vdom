@@ -110,17 +110,16 @@ animate n r s =
 
 oneFrameAnimate :: DOMNode -> VNode ->  IO ()
 oneFrameAnimate n r = do
-  node <- exNode3
-  let p = diff r $ toVNode node
+  let p = diff r exampleNode
   redraw n p
  where
    exampleNode = exNode2
 
+
+
 exNode = js_vnode ( "cowboy") noProps (mkChildren [(text "powerd"  )])
 
 exNode2 = toVNode exampleVNode
-
-exNode3 = (fromMaybe failedNode <$> convertMVnode)
 
 
 redraw :: DOMNode -> Patch -> IO ()
@@ -155,20 +154,17 @@ main = do
 
 
 exampleVNode :: VNodeAdapter
-exampleVNode = VNodeAdapter "h1" "internal1" [] [emptyDiv,emptyDiv2,buttonTag]
+exampleVNode = VNodeAdapter "h1" "internal1" [] [emptyDiv,emptyDiv2,buttonTag "button 0", populatedDiv]
   where emptyDiv = VNodeAdapter "div" "Internal2" [] []
         emptyDiv2 = VNodeAdapter "div" "" [] []
-        buttonTag = VNodeAdapter "button" "Button Thing!" [buttonProp, buttonId] []
+        populatedDiv = VNodeAdapter "div" "Internal 3" [] [buttonTag "button 1", populatedDiv2]
+        populatedDiv2 = VNodeAdapter "div" "Internal 4" [] [buttonTag "Button 2"]
+        buttonTag name = VNodeAdapter "button" name [buttonProp, buttonId] []
         buttonProp = Property "type" $ JSPText "button"
         buttonId = Property "id" $ JSPText "abuttonid!"
 
 failedNode :: VNodeAdapter
 failedNode = VNodeAdapter "h2" "failed" [] []
-
-convertMVnode :: IO (Maybe VNodeAdapter)
-convertMVnode = fromVNode vn
-  where vn = toVNode exampleVNode
-
 -- This example should render:
  --  <h1>
  --    internal1
