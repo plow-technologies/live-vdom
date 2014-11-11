@@ -56,7 +56,7 @@ newtype PropList = PropList { unPropList :: [Property]} deriving (Show)
 instance ToJSRef (PropList) where
   toJSRef (PropList xs) = do
     x <- newObj
-    foldlM insert x xs
+    foldM_ insert x xs 
     return x
     where
       -- VDom uses the property object like a Map from name to value

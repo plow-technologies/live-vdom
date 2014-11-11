@@ -155,13 +155,15 @@ main = do
 
 exampleVNode :: VNodeAdapter
 exampleVNode = VNodeAdapter "h1" "internal1" [] [emptyDiv,emptyDiv2,buttonTag "button 0", populatedDiv]
-  where emptyDiv = VNodeAdapter "div" "Internal2" [] []
+  where emptyDiv = VNodeAdapter "div" "Internal2" [idProp] []
         emptyDiv2 = VNodeAdapter "div" "" [] []
-        populatedDiv = VNodeAdapter "div" "Internal 3" [] [buttonTag "button 1", populatedDiv2]
-        populatedDiv2 = VNodeAdapter "div" "Internal 4" [] [buttonTag "Button 2"]
-        buttonTag name = VNodeAdapter "button" name [buttonProp, buttonId] []
+        populatedDiv = VNodeAdapter "div" "Internal 3" [idProp] [buttonTag "button 1", populatedDiv2]
+        populatedDiv2 = VNodeAdapter "div" "Internal 4" [idProp] [buttonTag "Button 2"]
+        buttonTag name = VNodeAdapter "button" name [alt,buttonProp, buttonId] []
         buttonProp = Property "type" $ JSPText "button"
         buttonId = Property "id" $ JSPText "abuttonid!"
+        alt = Property "name" $ JSPText "AltText!"
+        idProp = Property "id" $ JSPText "somethings"
 
 failedNode :: VNodeAdapter
 failedNode = VNodeAdapter "h2" "failed" [] []
