@@ -437,79 +437,81 @@ isConstructor (Ident []) = error "isConstructor: bad identifier"
 
 identPattern :: Parser Binding
 identPattern = gcon True <|> apat
-  where
-  apat = choice
-    [ varpat
-    , gcon False
-    , parens tuplepat
-    , brackets listpat
+
+apat = choice
+  [ varpat
+  , gcon False
+  , parens tuplepat
+  , brackets listpat
+  ]
+
+varpat = do
+  v <- try $ do v <- ident
+                guard (isVariable v)
+                return v
+  option (BindVar v) $ do
+    atsign
+    b <- apat
+    return (BindAs v b)
+ <?> "variable"
+
+gcon :: Bool -> Parser Binding
+gcon allowArgs = do
+  c <- try $ do c <- dataConstr
+                return c
+  choice
+    [ record c
+    , fmap (BindConstr c) (guard allowArgs >> many apat)
+    , return (BindConstr c [])
     ]
+ <?> "constructor"
 
-  varpat = do
-    v <- try $ do v <- ident
-                  guard (isVariable v)
-                  return v
-    option (BindVar v) $ do
-      atsign
-      b <- apat
-      return (BindAs v b)
-   <?> "variable"
+dataConstr = do
+  p <- dcPiece
+  ps <- many dcPieces
+  return $ toDataConstr p ps
 
-  gcon :: Bool -> Parser Binding
-  gcon allowArgs = do
-    c <- try $ do c <- dataConstr
-                  return c
-    choice
-      [ record c
-      , fmap (BindConstr c) (guard allowArgs >> many apat)
-      , return (BindConstr c [])
-      ]
-   <?> "constructor"
+dcPiece = do
+  x@(Ident y) <- ident
+  guard $ isConstructor x
+  return y
 
-  dataConstr = do
-    p <- dcPiece
-    ps <- many dcPieces
-    return $ toDataConstr p ps
+dcPieces = do
+  _ <- char '.'
+  dcPiece
 
-  dcPiece = do
-    x@(Ident y) <- ident
-    guard $ isConstructor x
-    return y
+toDataConstr x [] = DCUnqualified $ Ident x
+toDataConstr x (y:ys) =
+    go (x:) y ys
+  where
+    go front next [] = DCQualified (Module $ front []) (Ident next)
+    go front next (rest:rests) = go (front . (next:)) rest rests
 
-  dcPieces = do
-    _ <- char '.'
-    dcPiece
+record c = braces $ do
+  (fields, wild) <- option ([], False) $ go
+  return (BindRecord c fields wild)
+  where
+  go = (wildDots >> return ([], True))
+     <|> (do x         <- recordField
+             (xs,wild) <- option ([],False) (comma >> go)
+             return (x:xs,wild))
 
-  toDataConstr x [] = DCUnqualified $ Ident x
-  toDataConstr x (y:ys) =
-      go (x:) y ys
-    where
-      go front next [] = DCQualified (Module $ front []) (Ident next)
-      go front next (rest:rests) = go (front . (next:)) rest rests
+recordField = do
+  field <- ident
+  p <- option (BindVar field) -- support punning
+              (equals >> identPattern)
+  return (field,p)
 
-  record c = braces $ do
-    (fields, wild) <- option ([], False) $ go
-    return (BindRecord c fields wild)
-    where
-    go = (wildDots >> return ([], True))
-       <|> (do x         <- recordField
-               (xs,wild) <- option ([],False) (comma >> go)
-               return (x:xs,wild))
+tuplepat = do
+  xs <- identPattern `sepBy` comma
+  return $ case xs of
+    [x] -> x
+    _   -> BindTuple xs
 
-  recordField = do
-    field <- ident
-    p <- option (BindVar field) -- support punning
-                (equals >> identPattern)
-    return (field,p)
+listpat :: ParsecT String () Identity Binding
+listpat = BindList <$> identPattern `sepBy` comma
 
-  tuplepat = do
-    xs <- identPattern `sepBy` comma
-    return $ case xs of
-      [x] -> x
-      _   -> BindTuple xs
-
-  listpat = BindList <$> identPattern `sepBy` comma
-
+angle :: ParsecT [Char] u Identity Line
 angle = do
     _ <- char '<'
     name' <- many  $ noneOf " \t.#\r\n!>"
