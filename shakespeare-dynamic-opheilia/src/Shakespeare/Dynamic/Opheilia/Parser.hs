@@ -139,10 +139,10 @@ parseLine set = do
                 else return $ LineContent cs avoidNewLines)
     return (ss, x)
 
-eol' :: ParsecT [Char] u Identity ()
+eol' :: ParsecT String u Identity ()
 eol' = (char '\n' >> return ()) <|> (string "\r\n" >> return ())
 
-eol :: ParsecT [Char] u Identity ()
+eol :: ParsecT String u Identity ()
 eol = eof <|> eol'
 doctype set = do
     try $ string "!!!" >> eol
@@ -155,7 +155,7 @@ doctypeDollar set = do
         Nothing -> fail $ "Unknown doctype name: " ++ name
         Just val -> return $ LineContent [ContentRaw $ val ++ "\n"] True
 
-doctypeRaw :: ParsecT [Char] st Identity Line
+doctypeRaw :: ParsecT String st Identity Line
 doctypeRaw = do
     x <- try $ string "<!"
     y <- many $ noneOf "\r\n"
@@ -167,21 +167,21 @@ invalidDollar = do
     _ <- char '$'
     fail "Received a command I did not understand. If you wanted a literal $, start the line with a backslash."
 
-comment :: ParsecT [Char] st Identity Line
+comment :: ParsecT String st Identity Line
 comment = do
     _ <- try $ string "$#"
     _ <- many $ noneOf "\r\n"
     eol
     return $ LineContent [] True
 
-ssiInclude :: ParsecT [Char] st Identity Line
+ssiInclude :: ParsecT String st Identity Line
 ssiInclude = do
     x <- try $ string "<!--#"
     y <- many $ noneOf "\r\n"
     eol
     return $ LineContent [ContentRaw $ x ++ y] False
 
-htmlComment :: ParsecT [Char] st Identity Line
+htmlComment :: ParsecT String st Identity Line
 htmlComment = do
     _ <- try $ string "<!--"
     _ <- manyTill anyChar $ try $ string "-->"
@@ -189,7 +189,7 @@ htmlComment = do
     eol
     return $ LineContent [ContentRaw $ concat x] False {- FIXME -} -- FIXME handle variables?
 
-nonComments :: ParsecT [Char] u Identity [Char]
+nonComments :: ParsecT String u Identity [Char]
 nonComments = (many1 $ noneOf "\r\n<") <|> (do
     _ <- char '<'
     (do
@@ -203,22 +203,25 @@ backslash = do
     (eol >> return (LineContent [ContentRaw "\n"] True))
         <|> (uncurry LineContent <$> content InContent)
 
-controlIf :: ParsecT [Char] () Identity Line
+controlIf :: ParsecT String () Identity Line
 controlIf = do
     _ <- try $ string "$if"
-    spaces
-    x <- parseDeref
-    _ <- spaceTabs
+    x <- parseSpacesDeref
     eol
     return $ LineIf x
 
-
-controlElseIf :: ParsecT [Char] () Identity Line
-controlElseIf = do
-    _ <- try $ string "$elseif"
+parseSpacesDeref :: ParsecT String () Identity Deref
+parseSpacesDeref = do
     spaces
     x <- parseDeref
     _ <- spaceTabs
+    return x
+
+
+controlElseIf :: ParsecT String () Identity Line
+controlElseIf = do
+    _ <- try $ string "$elseif"
+    x <- parseSpacesDeref
     eol
     return $ LineElseIf x
 
@@ -235,7 +238,7 @@ binding = do
 bindingSep :: ParsecT String () Identity String
 bindingSep = char ',' >> spaceTabs
 
-controlMaybe :: ParsecT [Char] () Identity Line
+controlMaybe :: ParsecT String () Identity Line
 controlMaybe = do
     _ <- try $ string "$maybe"
     spaces
@@ -243,7 +246,7 @@ controlMaybe = do
     eol
     return $ LineMaybe x y
 
-controlForall :: ParsecT [Char] () Identity Line
+controlForall :: ParsecT String () Identity Line
 controlForall = do
     _ <- try $ string "$forall"
     spaces
@@ -252,7 +255,7 @@ controlForall = do
     return $ LineForall x y
 
 
-controlWith :: ParsecT [Char] () Identity Line
+controlWith :: ParsecT String () Identity Line
 controlWith = do
     _ <- try $ string "$with"
     spaces
@@ -260,7 +263,7 @@ controlWith = do
     return $ LineWith $ concat bindings -- concat because endBy returns a [[(Deref,Ident)]]
 
 
-controlCase :: ParsecT [Char] () Identity Line
+controlCase :: ParsecT String () Identity Line
 controlCase = do
     _ <- try $ string "$case"
     spaces
@@ -269,7 +272,7 @@ controlCase = do
     eol
     return $ LineCase x
 
-controlOf :: ParsecT [Char] () Identity Line
+controlOf :: ParsecT String () Identity Line
 controlOf = do
     _   <- try $ string "$of"
     spaces
@@ -278,8 +281,7 @@ controlOf = do
     eol
     return $ LineOf x
 
-content
-  :: ContentRule -> ParsecT String u Identity ([Content], Bool)
+content :: ContentRule -> ParsecT String u Identity ([Content], Bool)
 content cr = do
     x <- many $ content' cr
     case cr of
@@ -294,8 +296,7 @@ content cr = do
     cc (a:b) = a : cc b
 
 
-content'
-  :: ContentRule -> ParsecT String u Identity (Content, Bool)
+content' :: ContentRule -> ParsecT String u Identity (Content, Bool)
 content' cr = contentHash <|> contentAt <|> contentCaret
                           <|> contentUnder
                           <|> contentReg' cr
@@ -330,10 +331,10 @@ contentUnder = do
         Right deref -> return (ContentMsg deref, False)
 
 
-contentReg'
-  :: Text.Parsec.Prim.Stream s m Char =>
-     ContentRule -> ParsecT s u m (Content, Bool)        
-contentReg' x = (flip (,) False) <$> contentReg x
+contentReg'  :: Text.Parsec.Prim.Stream s m Char =>
+                ContentRule -> ParsecT s u m (Content, Bool)        
+contentReg' x = flip (,) False
+                <$> contentReg x
 
 contentReg
   :: Stream s m Char => ContentRule -> ParsecT s u m Content
@@ -362,8 +363,9 @@ tagCond = do
 tagClass :: Maybe Deref -> ParsecT String u Identity TagPiece
 tagClass x = do
     clazz <- char '.' >> tagAttribValue NotInQuotes
-    let hasHash (ContentRaw s) = any (== '#') s
-        hasHash _ = False
+    let
+      hasHash (ContentRaw s) =  '#' `elem` s
+      hasHash _ = False
     if any hasHash clazz
         then fail $ "Invalid class: " ++ show clazz ++ ". Did you want a space between a class and an ID?"
         else return (TagClass (x, clazz))
@@ -380,13 +382,16 @@ tagAttrs = do
     d <- between (char '{') (char '}') parseDeref
     return $ TagAttribs d
 
-tag'
-  :: [TagPiece]
+tag' :: [TagPiece]
      -> (String,
-         [(Maybe Deref, [Char], Maybe [Content])],
+         [(Maybe Deref, String , Maybe [Content])],
          [(Maybe Deref, [Content])],
          [Deref])
 tag' = foldr tag'' ("div", [], [], [])
+
+
+tag'' :: TagPiece  -> (String, [(Maybe Deref, String, Maybe [Content])], [(Maybe Deref, [Content])], [Deref])
+         -> (String, [(Maybe Deref, String, Maybe [Content])], [(Maybe Deref, [Content])], [Deref])
 tag'' (TagName s) (_, y, z, as) = (s, y, z, as)
 tag'' (TagIdent s) (x, y, z, as) = (x, (Nothing, "id", Just s) : y, z, as)
 tag'' (TagClass s) (x, y, z, as) = (x, y, s : z, as)
