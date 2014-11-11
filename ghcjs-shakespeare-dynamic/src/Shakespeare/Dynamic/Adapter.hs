@@ -55,16 +55,18 @@ newtype PropList = PropList { unPropList :: [Property]} deriving (Show)
 -- from the definition of property
 instance ToJSRef (PropList) where
   toJSRef (PropList xs) = do
-    x <- newObj
-    foldM_ insert x xs 
-    return x
+    attr <- newObj
+    foldM_ insert attr xs 
+    props <- newObj
+    setProp "attributes" attr props
+    return props
     where
       -- VDom uses the property object like a Map from name to value
       -- So we create a map for vdom to access
-      insert x (Property name value) = do
+      insert obj (Property name value) = do
         val <- toJSRef value
-        setProp name val x
-        return x
+        setProp name val obj
+        return obj
 
 
 -- Convert a VNodeAdapter to a VNode in order to diff it with vdom

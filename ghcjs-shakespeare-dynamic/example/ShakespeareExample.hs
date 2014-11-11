@@ -19,6 +19,7 @@ import qualified Data.IntMap                 as IM
 import           Data.Maybe
 import           Prelude                     hiding (div)
 
+import           Data.Aeson
 
 import           System.IO
 
@@ -113,13 +114,17 @@ oneFrameAnimate n r = do
   let p = diff r exampleNode
   redraw n p
  where
-   exampleNode = exNode2
+   exampleNode = exNode3
 
 
+printFullJSRef :: JSRef a -> IO ()
+printFullJSRef r = undefined
 
 exNode = js_vnode ( "cowboy") noProps (mkChildren [(text "powerd"  )])
 
 exNode2 = toVNode exampleVNode
+
+exNode3 = toVNode exampleVNode2
 
 
 redraw :: DOMNode -> Patch -> IO ()
@@ -164,6 +169,12 @@ exampleVNode = VNodeAdapter "h1" "internal1" [] [emptyDiv,emptyDiv2,buttonTag "b
         buttonId = Property "id" $ JSPText "abuttonid!"
         alt = Property "name" $ JSPText "AltText!"
         idProp = Property "id" $ JSPText "somethings"
+
+exampleVNode2 :: VNodeAdapter
+exampleVNode2 = VNodeAdapter "h1" "internal1" [] [button]
+  where button = VNodeAdapter "button" "Click me" [bType,foo] []
+        bType = Property "type" $ JSPText "button"
+        foo = Property "foo" $ JSPText "bar"
 
 failedNode :: VNodeAdapter
 failedNode = VNodeAdapter "h2" "failed" [] []

@@ -52,7 +52,8 @@ executable example
                   ghcjs-base,
                   shakespeare-dynamic,
                   vdom-adapter,
-                  text
+                  text,
+                  aeson
   ghcjs-Options:    -O -Wall
 
 Test-Suite spec
