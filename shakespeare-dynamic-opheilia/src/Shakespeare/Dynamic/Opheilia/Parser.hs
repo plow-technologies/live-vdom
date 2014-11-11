@@ -98,7 +98,7 @@ parseLines set s =
         res <- many (parseLine set')
         return (mnewline, set', res)
 
-parseNewline :: ParsecT [Char] () Identity (Maybe NewlineStyle)
+parseNewline :: ParsecT String () Identity (Maybe NewlineStyle)
 parseNewline =
     (try (many eol' >> spaceTabs >> string "$newline ") >> parseNewline' >>= \nl -> eol' >> return nl) <|>
     return Nothing
@@ -110,8 +110,8 @@ parseNewline' =
 
 parseLine :: HamletSettings -> Parser (Int, Line)
 parseLine set = do
-    ss <- fmap sum $ many ((char ' ' >> return 1) <|>
-                           (char '\t' >> fail "Tabs are not allowed in Hamlet indentation"))
+    ss <- fmap sum $ many (char ' ' >> return 1) <|>
+                           (char '\t' >> fail "Tabs are not allowed in Hamlet indentation")
     x <- doctype set <|>
          doctypeDollar set <|>
          comment <|>
@@ -140,7 +140,8 @@ parseLine set = do
     return (ss, x)
 
 eol' :: ParsecT String u Identity ()
-eol' = (char '\n' >> return ()) <|> (string "\r\n" >> return ())
+eol' = void (char '\n' ) <|>
+       void (string "\r\n")
 
 eol :: ParsecT String u Identity ()
 eol = eof <|> eol'
@@ -189,15 +190,15 @@ htmlComment = do
     eol
     return $ LineContent [ContentRaw $ concat x] False {- FIXME -} -- FIXME handle variables?
 
-nonComments :: ParsecT String u Identity [Char]
-nonComments = (many1 $ noneOf "\r\n<") <|> (do
+nonComments :: ParsecT String u Identity String
+nonComments = many1 ( noneOf "\r\n<") <|> (do
     _ <- char '<'
     (do
         _ <- try $ string "!--"
         _ <- manyTill anyChar $ try $ string "-->"
         return "") <|> return "<")
 
-backslash :: ParsecT [Char] u Identity Line
+backslash :: ParsecT String u Identity Line
 backslash = do
     _ <- char '\\'
     (eol >> return (LineContent [ContentRaw "\n"] True))
@@ -230,9 +231,7 @@ binding = do
     y <- identPattern
     spaces
     _ <- string "<-"
-    spaces
-    x <- parseDeref
-    _ <- spaceTabs
+    x <- parseSpacesDeref
     return (x,y)
 
 bindingSep :: ParsecT String () Identity String
@@ -241,17 +240,20 @@ bindingSep = char ',' >> spaceTabs
 controlMaybe :: ParsecT String () Identity Line
 controlMaybe = do
     _ <- try $ string "$maybe"
+    (x,y) <- parseSpacesBindingEol
+    return $ LineMaybe x y
+
+
+parseSpacesBindingEol = do 
     spaces
     (x,y) <- binding
     eol
-    return $ LineMaybe x y
+    return (x,y)
 
 controlForall :: ParsecT String () Identity Line
 controlForall = do
     _ <- try $ string "$forall"
-    spaces
-    (x,y) <- binding
-    eol
+    (x,y) <- parseSpacesBindingEol    
     return $ LineForall x y
 
 
@@ -266,9 +268,7 @@ controlWith = do
 controlCase :: ParsecT String () Identity Line
 controlCase = do
     _ <- try $ string "$case"
-    spaces
-    x <- parseDeref
-    _ <- spaceTabs
+    x <- parseSpacesDeref
     eol
     return $ LineCase x
 
@@ -336,16 +336,14 @@ contentReg'  :: Text.Parsec.Prim.Stream s m Char =>
 contentReg' x = flip (,) False
                 <$> contentReg x
 
-contentReg
-  :: Stream s m Char => ContentRule -> ParsecT s u m Content
+contentReg :: Stream s m Char => ContentRule -> ParsecT s u m Content
 contentReg InContent = (ContentRaw . return) <$> noneOf "#@^\r\n"
 contentReg NotInQuotes = (ContentRaw . return) <$> noneOf "@^#. \t\n\r>"
 contentReg NotInQuotesAttr = (ContentRaw . return) <$> noneOf "@^ \t\n\r>"
 contentReg InQuotes = (ContentRaw . return) <$> noneOf "#@^\"\n\r"
 
 
-tagAttribValue
-  :: ContentRule -> ParsecT String u Identity [Content]
+tagAttribValue :: ContentRule -> ParsecT String u Identity [Content]
 tagAttribValue notInQuotes = do
     cr <- (char '"' >> return InQuotes) <|> return notInQuotes
     fst <$> content cr
@@ -464,8 +462,7 @@ varpat = do
 
 gcon :: Bool -> Parser Binding
 gcon allowArgs = do
-  c <- try $ do c <- dataConstr
-                return c
+  c <- try dataConstr             
   choice
     [ record c
     , fmap (BindConstr c) (guard allowArgs >> many apat)
@@ -498,13 +495,16 @@ toDataConstr x (y:ys) =
 
 record :: DataConstr -> ParsecT String () Identity Binding
 record c = braces $ do
-  (fields, wild) <- option ([], False) $ go
+  (fields, wild) <- option ([], False) go
   return (BindRecord c fields wild)
   where
-  go = (wildDots >> return ([], True))
-     <|> (do x         <- recordField
-             (xs,wild) <- option ([],False) (comma >> go)
-             return (x:xs,wild))
+  parseWildDotsAndReturnEmptyListTuple = wildDots >> return ([], True)
+  parseNoWildDotsRecord = do x <- recordField
+                             (xs,wild) <- option ([],False) (comma >> go)
+                             return (x:xs,wild)
+                          
+  go = parseWildDotsAndReturnEmptyListTuple
+     <|>  parseNoWildDotsRecord
 
 recordField :: ParsecT String () Identity (Ident, Binding)
 recordField = do
@@ -527,7 +527,7 @@ angle = do
     _ <- char '<'
     name' <- many  $ noneOf " \t.#\r\n!>"
     let name = if null name' then "div" else name'
-    xs <- many $ try ((many $ oneOf " \t\r\n") >>
+    xs <- many $ try (many ( oneOf " \t\r\n") >>
           (tagIdent <|> tagCond <|> tagClass Nothing <|> tagAttrs <|> tagAttrib Nothing))
     _ <- many $ oneOf " \t\r\n"
     _ <- char '>'
@@ -743,7 +743,7 @@ instance Lift NewlineStyle where
     lift DefaultNewlineStyle = [|DefaultNewlineStyle|]
 
 instance Lift (String -> CloseStyle) where
-    lift _ = [|\s -> htmlCloseStyle s|]
+    lift _ = [| htmlCloseStyle |]
 
 instance Lift HamletSettings where
     lift (HamletSettings a b c d) = [|HamletSettings $(lift a) $(lift b) $(lift c) $(lift d)|]
