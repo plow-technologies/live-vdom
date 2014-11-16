@@ -1,6 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE GADTs #-}
-
 
 module VDOM.Adapter.Types where
 
@@ -24,9 +22,9 @@ data Property = Property {
 
 type TagName = String
 
-data VNodeAdapter where
-    VText :: String -> VNodeAdapter
-    VNode :: TagName -> [Property] -> [VNodeAdapter] -> VNodeAdapter
+data VNodeAdapter = 
+     VText {virtualText :: String }
+   | VNode {vNodeTagName :: TagName, vNodePropsList :: [Property], vNodeChildren :: [VNodeAdapter]}
     deriving (Show)
 
 -- newtype VText = VText { unVTextAdapter :: String } deriving (Eq, Show)
