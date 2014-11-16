@@ -98,7 +98,7 @@ parseLines set s =
         res <- many (parseLine set')
         return (mnewline, set', res)
 
-parseNewline :: ParsecT [Char] () Identity (Maybe NewlineStyle)
+parseNewline :: ParsecT String () Identity (Maybe NewlineStyle)
 parseNewline =
     (try (many eol' >> spaceTabs >> string "$newline ") >> parseNewline' >>= \nl -> eol' >> return nl) <|>
     return Nothing
@@ -110,8 +110,8 @@ parseNewline' =
 
 parseLine :: HamletSettings -> Parser (Int, Line)
 parseLine set = do
-    ss <- fmap sum $ many ((char ' ' >> return 1) <|>
-                           (char '\t' >> fail "Tabs are not allowed in Hamlet indentation"))
+    ss <- fmap sum $ many (char ' ' >> return 1) <|>
+                           (char '\t' >> fail "Tabs are not allowed in Hamlet indentation")
     x <- doctype set <|>
          doctypeDollar set <|>
          comment <|>
@@ -139,10 +139,11 @@ parseLine set = do
                 else return $ LineContent cs avoidNewLines)
     return (ss, x)
 
-eol' :: ParsecT [Char] u Identity ()
-eol' = (char '\n' >> return ()) <|> (string "\r\n" >> return ())
+eol' :: ParsecT String u Identity ()
+eol' = void (char '\n' ) <|>
+       void (string "\r\n")
 
-eol :: ParsecT [Char] u Identity ()
+eol :: ParsecT String u Identity ()
 eol = eof <|> eol'
 doctype set = do
     try $ string "!!!" >> eol
@@ -155,7 +156,7 @@ doctypeDollar set = do
         Nothing -> fail $ "Unknown doctype name: " ++ name
         Just val -> return $ LineContent [ContentRaw $ val ++ "\n"] True
 
-doctypeRaw :: ParsecT [Char] st Identity Line
+doctypeRaw :: ParsecT String st Identity Line
 doctypeRaw = do
     x <- try $ string "<!"
     y <- many $ noneOf "\r\n"
@@ -167,21 +168,21 @@ invalidDollar = do
     _ <- char '$'
     fail "Received a command I did not understand. If you wanted a literal $, start the line with a backslash."
 
-comment :: ParsecT [Char] st Identity Line
+comment :: ParsecT String st Identity Line
 comment = do
     _ <- try $ string "$#"
     _ <- many $ noneOf "\r\n"
     eol
     return $ LineContent [] True
 
-ssiInclude :: ParsecT [Char] st Identity Line
+ssiInclude :: ParsecT String st Identity Line
 ssiInclude = do
     x <- try $ string "<!--#"
     y <- many $ noneOf "\r\n"
     eol
     return $ LineContent [ContentRaw $ x ++ y] False
 
-htmlComment :: ParsecT [Char] st Identity Line
+htmlComment :: ParsecT String st Identity Line
 htmlComment = do
     _ <- try $ string "<!--"
     _ <- manyTill anyChar $ try $ string "-->"
@@ -189,36 +190,39 @@ htmlComment = do
     eol
     return $ LineContent [ContentRaw $ concat x] False {- FIXME -} -- FIXME handle variables?
 
-nonComments :: ParsecT [Char] u Identity [Char]
-nonComments = (many1 $ noneOf "\r\n<") <|> (do
+nonComments :: ParsecT String u Identity String
+nonComments = many1 ( noneOf "\r\n<") <|> (do
     _ <- char '<'
     (do
         _ <- try $ string "!--"
         _ <- manyTill anyChar $ try $ string "-->"
         return "") <|> return "<")
 
-backslash :: ParsecT [Char] u Identity Line
+backslash :: ParsecT String u Identity Line
 backslash = do
     _ <- char '\\'
     (eol >> return (LineContent [ContentRaw "\n"] True))
         <|> (uncurry LineContent <$> content InContent)
 
-controlIf :: ParsecT [Char] () Identity Line
+controlIf :: ParsecT String () Identity Line
 controlIf = do
     _ <- try $ string "$if"
-    spaces
-    x <- parseDeref
-    _ <- spaceTabs
+    x <- parseSpacesDeref
     eol
     return $ LineIf x
 
-
-controlElseIf :: ParsecT [Char] () Identity Line
-controlElseIf = do
-    _ <- try $ string "$elseif"
+parseSpacesDeref :: ParsecT String () Identity Deref
+parseSpacesDeref = do
     spaces
     x <- parseDeref
     _ <- spaceTabs
+    return x
+
+
+controlElseIf :: ParsecT String () Identity Line
+controlElseIf = do
+    _ <- try $ string "$elseif"
+    x <- parseSpacesDeref
     eol
     return $ LineElseIf x
 
@@ -227,32 +231,33 @@ binding = do
     y <- identPattern
     spaces
     _ <- string "<-"
-    spaces
-    x <- parseDeref
-    _ <- spaceTabs
+    x <- parseSpacesDeref
     return (x,y)
 
 bindingSep :: ParsecT String () Identity String
 bindingSep = char ',' >> spaceTabs
 
-controlMaybe :: ParsecT [Char] () Identity Line
+controlMaybe :: ParsecT String () Identity Line
 controlMaybe = do
     _ <- try $ string "$maybe"
-    spaces
-    (x,y) <- binding
-    eol
+    (x,y) <- parseSpacesBindingEol
     return $ LineMaybe x y
 
-controlForall :: ParsecT [Char] () Identity Line
-controlForall = do
-    _ <- try $ string "$forall"
+
+parseSpacesBindingEol = do 
     spaces
     (x,y) <- binding
     eol
+    return (x,y)
+
+controlForall :: ParsecT String () Identity Line
+controlForall = do
+    _ <- try $ string "$forall"
+    (x,y) <- parseSpacesBindingEol    
     return $ LineForall x y
 
 
-controlWith :: ParsecT [Char] () Identity Line
+controlWith :: ParsecT String () Identity Line
 controlWith = do
     _ <- try $ string "$with"
     spaces
@@ -260,16 +265,14 @@ controlWith = do
     return $ LineWith $ concat bindings -- concat because endBy returns a [[(Deref,Ident)]]
 
 
-controlCase :: ParsecT [Char] () Identity Line
+controlCase :: ParsecT String () Identity Line
 controlCase = do
     _ <- try $ string "$case"
-    spaces
-    x <- parseDeref
-    _ <- spaceTabs
+    x <- parseSpacesDeref
     eol
     return $ LineCase x
 
-controlOf :: ParsecT [Char] () Identity Line
+controlOf :: ParsecT String () Identity Line
 controlOf = do
     _   <- try $ string "$of"
     spaces
@@ -278,8 +281,7 @@ controlOf = do
     eol
     return $ LineOf x
 
-content
-  :: ContentRule -> ParsecT String u Identity ([Content], Bool)
+content :: ContentRule -> ParsecT String u Identity ([Content], Bool)
 content cr = do
     x <- many $ content' cr
     case cr of
@@ -294,8 +296,7 @@ content cr = do
     cc (a:b) = a : cc b
 
 
-content'
-  :: ContentRule -> ParsecT String u Identity (Content, Bool)
+content' :: ContentRule -> ParsecT String u Identity (Content, Bool)
 content' cr = contentHash <|> contentAt <|> contentCaret
                           <|> contentUnder
                           <|> contentReg' cr
@@ -330,21 +331,19 @@ contentUnder = do
         Right deref -> return (ContentMsg deref, False)
 
 
-contentReg'
-  :: Text.Parsec.Prim.Stream s m Char =>
-     ContentRule -> ParsecT s u m (Content, Bool)        
-contentReg' x = (flip (,) False) <$> contentReg x
+contentReg'  :: Text.Parsec.Prim.Stream s m Char =>
+                ContentRule -> ParsecT s u m (Content, Bool)        
+contentReg' x = flip (,) False
+                <$> contentReg x
 
-contentReg
-  :: Stream s m Char => ContentRule -> ParsecT s u m Content
+contentReg :: Stream s m Char => ContentRule -> ParsecT s u m Content
 contentReg InContent = (ContentRaw . return) <$> noneOf "#@^\r\n"
 contentReg NotInQuotes = (ContentRaw . return) <$> noneOf "@^#. \t\n\r>"
 contentReg NotInQuotesAttr = (ContentRaw . return) <$> noneOf "@^ \t\n\r>"
 contentReg InQuotes = (ContentRaw . return) <$> noneOf "#@^\"\n\r"
 
 
-tagAttribValue
-  :: ContentRule -> ParsecT String u Identity [Content]
+tagAttribValue :: ContentRule -> ParsecT String u Identity [Content]
 tagAttribValue notInQuotes = do
     cr <- (char '"' >> return InQuotes) <|> return notInQuotes
     fst <$> content cr
@@ -362,8 +361,9 @@ tagCond = do
 tagClass :: Maybe Deref -> ParsecT String u Identity TagPiece
 tagClass x = do
     clazz <- char '.' >> tagAttribValue NotInQuotes
-    let hasHash (ContentRaw s) = any (== '#') s
-        hasHash _ = False
+    let
+      hasHash (ContentRaw s) =  '#' `elem` s
+      hasHash _ = False
     if any hasHash clazz
         then fail $ "Invalid class: " ++ show clazz ++ ". Did you want a space between a class and an ID?"
         else return (TagClass (x, clazz))
@@ -380,13 +380,16 @@ tagAttrs = do
     d <- between (char '{') (char '}') parseDeref
     return $ TagAttribs d
 
-tag'
-  :: [TagPiece]
+tag' :: [TagPiece]
      -> (String,
-         [(Maybe Deref, [Char], Maybe [Content])],
+         [(Maybe Deref, String , Maybe [Content])],
          [(Maybe Deref, [Content])],
          [Deref])
 tag' = foldr tag'' ("div", [], [], [])
+
+
+tag'' :: TagPiece  -> (String, [(Maybe Deref, String, Maybe [Content])], [(Maybe Deref, [Content])], [Deref])
+         -> (String, [(Maybe Deref, String, Maybe [Content])], [(Maybe Deref, [Content])], [Deref])
 tag'' (TagName s) (_, y, z, as) = (s, y, z, as)
 tag'' (TagIdent s) (x, y, z, as) = (x, (Nothing, "id", Just s) : y, z, as)
 tag'' (TagClass s) (x, y, z, as) = (x, y, s : z, as)
@@ -437,84 +440,94 @@ isConstructor (Ident []) = error "isConstructor: bad identifier"
 
 identPattern :: Parser Binding
 identPattern = gcon True <|> apat
-  where
-  apat = choice
-    [ varpat
-    , gcon False
-    , parens tuplepat
-    , brackets listpat
+
+apat :: ParsecT String () Identity Binding
+apat = choice
+  [ varpat
+  , gcon False
+  , parens tuplepat
+  , brackets listpat
+  ]
+
+varpat :: ParsecT String () Identity Binding
+varpat = do
+  v <- try $ do v <- ident
+                guard (isVariable v)
+                return v
+  option (BindVar v) $ do
+    atsign
+    b <- apat
+    return (BindAs v b)
+ <?> "variable"
+
+gcon :: Bool -> Parser Binding
+gcon allowArgs = do
+  c <- try dataConstr             
+  choice
+    [ record c
+    , fmap (BindConstr c) (guard allowArgs >> many apat)
+    , return (BindConstr c [])
     ]
+ <?> "constructor"
 
-  varpat = do
-    v <- try $ do v <- ident
-                  guard (isVariable v)
-                  return v
-    option (BindVar v) $ do
-      atsign
-      b <- apat
-      return (BindAs v b)
-   <?> "variable"
+dataConstr :: ParsecT String () Identity DataConstr
+dataConstr = do
+  p <- dcPiece
+  ps <- many dcPieces
+  return $ toDataConstr p ps
 
-  gcon :: Bool -> Parser Binding
-  gcon allowArgs = do
-    c <- try $ do c <- dataConstr
-                  return c
-    choice
-      [ record c
-      , fmap (BindConstr c) (guard allowArgs >> many apat)
-      , return (BindConstr c [])
-      ]
-   <?> "constructor"
+dcPieces :: ParsecT String () Identity String
+dcPiece = do
+  x@(Ident y) <- ident
+  guard $ isConstructor x
+  return y
 
-  dataConstr = do
-    p <- dcPiece
-    ps <- many dcPieces
-    return $ toDataConstr p ps
+dcPieces = do
+  _ <- char '.'
+  dcPiece
 
-  dcPiece = do
-    x@(Ident y) <- ident
-    guard $ isConstructor x
-    return y
+toDataConstr x [] = DCUnqualified $ Ident x
+toDataConstr x (y:ys) =
+    go (x:) y ys
+  where
+    go front next [] = DCQualified (Module $ front []) (Ident next)
+    go front next (rest:rests) = go (front . (next:)) rest rests
 
-  dcPieces = do
-    _ <- char '.'
-    dcPiece
+record :: DataConstr -> ParsecT String () Identity Binding
+record c = braces $ do
+  (fields, wild) <- option ([], False) go
+  return (BindRecord c fields wild)
+  where
+  parseWildDotsAndReturnEmptyListTuple = wildDots >> return ([], True)
+  parseNoWildDotsRecord = do x <- recordField
+                             (xs,wild) <- option ([],False) (comma >> go)
+                             return (x:xs,wild)
+                          
+  go = parseWildDotsAndReturnEmptyListTuple
+     <|>  parseNoWildDotsRecord
 
-  toDataConstr x [] = DCUnqualified $ Ident x
-  toDataConstr x (y:ys) =
-      go (x:) y ys
-    where
-      go front next [] = DCQualified (Module $ front []) (Ident next)
-      go front next (rest:rests) = go (front . (next:)) rest rests
+recordField :: ParsecT String () Identity (Ident, Binding)
+recordField = do
+  field <- ident
+  p <- option (BindVar field) -- support punning
+              (equals >> identPattern)
+  return (field,p)
 
-  record c = braces $ do
-    (fields, wild) <- option ([], False) $ go
-    return (BindRecord c fields wild)
-    where
-    go = (wildDots >> return ([], True))
-       <|> (do x         <- recordField
-               (xs,wild) <- option ([],False) (comma >> go)
-               return (x:xs,wild))
+tuplepat = do
+  xs <- identPattern `sepBy` comma
+  return $ case xs of
+    [x] -> x
+    _   -> BindTuple xs
 
-  recordField = do
-    field <- ident
-    p <- option (BindVar field) -- support punning
-                (equals >> identPattern)
-    return (field,p)
+listpat :: ParsecT String () Identity Binding
+listpat = BindList <$> identPattern `sepBy` comma
 
-  tuplepat = do
-    xs <- identPattern `sepBy` comma
-    return $ case xs of
-      [x] -> x
-      _   -> BindTuple xs
-
-  listpat = BindList <$> identPattern `sepBy` comma
-
+angle :: ParsecT String u Identity Line
 angle = do
     _ <- char '<'
     name' <- many  $ noneOf " \t.#\r\n!>"
     let name = if null name' then "div" else name'
-    xs <- many $ try ((many $ oneOf " \t\r\n") >>
+    xs <- many $ try (many ( oneOf " \t\r\n") >>
           (tagIdent <|> tagCond <|> tagClass Nothing <|> tagAttrs <|> tagAttrib Nothing))
     _ <- many $ oneOf " \t\r\n"
     _ <- char '>'
@@ -730,7 +743,7 @@ instance Lift NewlineStyle where
     lift DefaultNewlineStyle = [|DefaultNewlineStyle|]
 
 instance Lift (String -> CloseStyle) where
-    lift _ = [|\s -> htmlCloseStyle s|]
+    lift _ = [| htmlCloseStyle |]
 
 instance Lift HamletSettings where
     lift (HamletSettings a b c d) = [|HamletSettings $(lift a) $(lift b) $(lift c) $(lift d)|]
