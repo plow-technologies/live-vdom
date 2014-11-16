@@ -31,9 +31,11 @@ import           GHCJS.VDOM.QQ
 
 import           Shakespeare.Dynamic.Adapter
 
-import           VDOM.Adapter
+import qualified VDOM.Adapter as VDA
 
 import           Control.Arrow
+
+import qualified Data.Text as T
 
 
 red :: JSString
@@ -114,7 +116,7 @@ oneFrameAnimate n r = do
   let p = diff r exampleNode
   redraw n p
  where
-   exampleNode = exNode3
+   exampleNode = exNode2
 
 
 printFullJSRef :: JSRef a -> IO ()
@@ -158,26 +160,30 @@ main = do
   oneFrameAnimate root emptyDiv
 
 
-exampleVNode :: VNodeAdapter
-exampleVNode = VNodeAdapter "h1" "internal1" [] [emptyDiv,emptyDiv2,buttonTag "button 0", populatedDiv]
-  where emptyDiv = VNodeAdapter "div" "Internal2" [idProp] []
-        emptyDiv2 = VNodeAdapter "div" "" [] []
-        populatedDiv = VNodeAdapter "div" "Internal 3" [idProp] [buttonTag "button 1", populatedDiv2]
-        populatedDiv2 = VNodeAdapter "div" "Internal 4" [idProp] [buttonTag "Button 2"]
-        buttonTag name = VNodeAdapter "button" name [alt,buttonProp, buttonId] []
-        buttonProp = Property "type" $ JSPText "button"
-        buttonId = Property "id" $ JSPText "abuttonid!"
-        alt = Property "name" $ JSPText "AltText!"
-        idProp = Property "id" $ JSPText "somethings"
+exampleVNode :: VDA.VNodeAdapter
+exampleVNode = VDA.VNode "h1"  [] [VDA.VText "Internal", emptyDiv,emptyDiv2,buildButton "button", populatedDiv]
+  where emptyDiv = VDA.VNode "div"  [idProp] [VDA.VText "Internal 2"]
+        emptyDiv2 = VDA.VNode "div" [] []
+        populatedDiv = VDA.VNode "div" [idProp] [VDA.VText "Internal 3", buildButton "button 1", populatedDiv2]
+        populatedDiv2 = VDA.VNode "div" [idProp] [VDA.VText "Internal 4", buildButton "Button 2"]
+        buildButton name = VDA.VNode "button" [ alt,buttonProp, buttonId] [VDA.VText name]
+        buttonProp = buildPropS "type" "button"
+        buttonId = buildPropS "id" "abuttonid!"
+        alt = buildPropS "name" "AltText!"
+        idProp = buildPropS "id" "somethings"
 
-exampleVNode2 :: VNodeAdapter
-exampleVNode2 = VNodeAdapter "h1" "internal1" [] [button]
-  where button = VNodeAdapter "button" "Click me" [bType,foo] []
-        bType = Property "type" $ JSPText "button"
-        foo = Property "foo" $ JSPText "bar"
 
-failedNode :: VNodeAdapter
-failedNode = VNodeAdapter "h2" "failed" [] []
+buildPropS :: String -> T.Text -> VDA.Property
+buildPropS = VDA.buildProp
+
+exampleVNode2 :: VDA.VNodeAdapter
+exampleVNode2 = VDA.VNode "h1"  [] [VDA.VText "button",button]
+  where button = VDA.VNode "button"  [bType,foo] [VDA.VText "Click me"]
+        bType = buildPropS "type" "button"
+        foo = buildPropS "foo" "bar"
+
+failedNode :: VDA.VNodeAdapter
+failedNode = VDA.VNode "failed" [] [VDA.VText "h2"]
 -- This example should render:
  --  <h1>
  --    internal1

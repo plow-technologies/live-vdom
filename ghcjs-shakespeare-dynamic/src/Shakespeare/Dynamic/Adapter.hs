@@ -16,7 +16,7 @@ import           GHCJS.Foreign
 import           GHCJS.Marshal
 import           GHCJS.PureMarshal
 import           GHCJS.Types
-import           GHCJS.VDOM
+import qualified GHCJS.VDOM as VD
 
 import           System.IO.Unsafe    (unsafePerformIO)
 
@@ -70,10 +70,11 @@ instance ToJSRef (PropList) where
 
 
 -- Convert a VNodeAdapter to a VNode in order to diff it with vdom
-toVNode :: VNodeAdapter -> VNode
-toVNode (VNodeAdapter aTagName innerText aProps aChildren) = js_vnode tagName props $ mChildren aChildren
+toVNode :: VNodeAdapter -> VD.VNode
+toVNode (VNode aTagName aProps aChildren) = VD.js_vnode tagName props $ mChildren aChildren
   where tagName = toJSString aTagName
-        props = toProperties . castRef . unsafePerformIO . toJSRef $ PropList aProps
-        mChildren [] = mkChildren [text $ toJSString innerText]
-        mChildren xs = mkChildren $ (text $ toJSString innerText): (toVNode <$> aChildren)
+        props = VD.toProperties . castRef . unsafePerformIO . toJSRef $ PropList aProps
+        mChildren [] = VD.noChildren
+        mChildren xs = VD.mkChildren $ toVNode <$> aChildren
+toVNode (VText inner) = VD.text $ toJSString inner
 
