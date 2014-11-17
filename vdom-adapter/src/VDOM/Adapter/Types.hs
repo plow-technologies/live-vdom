@@ -3,55 +3,47 @@
 module VDOM.Adapter.Types where
 
 
-import Data.Int
-import Data.Word
-import Data.Text
+import           Data.Int
+import           Data.Text
+import           Data.Word
 
+-- | A javascript property like 'input=value'
+-- or even 'ng-click="function()"'
 data Property = Property {
-  propertyName :: String
+  propertyName  :: String
 , propertyValue :: JSProp
 } deriving (Show)
 
-
--- data VNode = VNode {
---   vNodeAdapterTagName :: String
--- , vNodeAdapterInnerText :: String
--- , vNodeAdapterProps :: [Property]
--- , vNodeAdapterChildren :: [VNodeAdapter]
--- } deriving (Show)
-
 type TagName = String
 
-data VNodeAdapter = 
-     VText {virtualText :: String }
-   | VNode {vNodeTagName :: TagName, vNodePropsList :: [Property], vNodeChildren :: [VNodeAdapter]}
+
+-- | Intermediary type between ghcjs and haskell
+-- that has  a direct corrolation to the js-vnode
+-- library
+data VNodeAdapter =
+     VText {virtualText :: String } -- ^ Child text with  no tag name, properties, or children
+   | VNode {vNodeTagName :: TagName, vNodePropsList :: [Property], vNodeChildren :: [VNodeAdapter]} -- ^ Basic tree structor for a node with children and properties
     deriving (Show)
 
--- newtype VText = VText { unVTextAdapter :: String } deriving (Eq, Show)
 
-
--- data VNodeAdapter = VText { unVTextAdapter :: String } deriving (Eq, Show) | VNode {
---       vNodeAdapterTagName :: String
---     , vNodeAdapterInnerText :: String
---     , vNodeAdapterProps :: [Property]
---     , vNodeAdapterChildren :: [VNodeAdapter]
---     } deriving (Show) deriving (Show)
-
-
+-- | The types that are representable in javascript
+-- tag values
 data JSProp = JSPBool Bool
             | JSPText Text
-            | JSPInt Int    
-            | JSPInt8 Int8   
-            | JSPInt16 Int16  
-            | JSPInt32 Int32  
-            | JSPWord Word   
-            | JSPWord8 Word8  
-            | JSPWord16 Word16 
-            | JSPWord32 Word32 
-            | JSPFloat Float  
-            | JSPDouble Double 
+            | JSPInt Int
+            | JSPInt8 Int8
+            | JSPInt16 Int16
+            | JSPInt32 Int32
+            | JSPWord Word
+            | JSPWord8 Word8
+            | JSPWord16 Word16
+            | JSPWord32 Word32
+            | JSPFloat Float
+            | JSPDouble Double
     deriving (Show)
 
+-- | A provisional class to make building a JSProp
+-- easier
 
 class IsJSProp a where
     toJSProp :: a -> JSProp
@@ -82,17 +74,19 @@ instance IsJSProp Double where
     toJSProp = JSPDouble
 
 
-
-buildProp :: IsJSProp a => String -> a -> Property
+-- | Build a property from a name and value
+buildProp :: IsJSProp a => 
+             String       -- ^ Property name
+             -> a         -- ^ Property value
+             -> Property
 buildProp name prop = Property name $ toJSProp prop
 
 
 test :: VNodeAdapter
-test = VNode "h1" [] [emptyDiv,buttonTag] 
+test = VNode "h1" [] [emptyDiv,buttonTag]
   where emptyDiv = VNode "div" [] []
         buttonTag = VNode "button" [buttonProp] [VText "Button Thing!"]
         buttonProp = Property "type" $ JSPText "button"
-
 
 --  Should render to be like:
 --  <h1>
