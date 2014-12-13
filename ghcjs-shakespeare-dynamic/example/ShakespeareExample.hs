@@ -27,6 +27,7 @@ import           GHCJS.Foreign
 import           GHCJS.Foreign.QQ
 import           GHCJS.Types
 import           GHCJS.VDOM
+import           GHCJS.VDOM.Event
 import           GHCJS.VDOM.QQ
 
 import           Shakespeare.Dynamic.Adapter
@@ -113,10 +114,14 @@ animate n r s =
 
 oneFrameAnimate :: DOMNode -> VNode ->  IO ()
 oneFrameAnimate n r = do
+  printVEvent
+  let exampleNode =  exNode2
+  cb <- printFromHaskell
+  jsFunListener exNode2 "click" cb
+  addOnClick exampleNode
   let p = diff r exampleNode
   redraw n p
- where
-   exampleNode = exNode2
+   
 
 
 printFullJSRef :: JSRef a -> IO ()
@@ -126,7 +131,7 @@ exNode = js_vnode ( "cowboy") noProps (mkChildren [(text "powerd"  )])
 
 exNode2 = toVNode exampleVNode
 
-exNode3 = toVNode exampleVNode2
+exNode3 =  toVNode exampleVNode2
 
 
 redraw :: DOMNode -> Patch -> IO ()
@@ -176,6 +181,13 @@ exampleVNode = VDA.VNode "h1"  [] [VDA.VText "Internal", emptyDiv,emptyDiv2,buil
 buildPropS :: String -> T.Text -> VDA.Property
 buildPropS = VDA.buildProp
 
+
+addOnClick :: VNode -> IO VNode
+addOnClick (VNode vn) = do
+  cb <- syncCallback AlwaysRetain True (putStrLn "Hello from haskell!")
+  setProp ("onclick" :: String) cb vn
+  return $ VNode vn
+
 exampleVNode2 :: VDA.VNodeAdapter
 exampleVNode2 = VDA.VNode "h1"  [] [VDA.VText "button",button]
   where button = VDA.VNode "button"  [bType,foo] [VDA.VText "Click me"]
@@ -192,3 +204,19 @@ failedNode = VDA.VNode "failed" [] [VDA.VText "h2"]
  --    <button type="button" id="abuttonid!">Button Thing!</button>
  --  </h1>
 --
+
+foreign import javascript unsafe "abc = $1" js_JSFunListener :: VNode -> JSString -> (JSFun (IO ())) -> IO ()
+
+jsFunListener :: VNode -> String -> (JSFun (IO ())) -> IO ()
+jsFunListener el et cb = do
+    js_JSFunListener el (toJSString et) cb
+
+printFromHaskell = asyncCallback AlwaysRetain (putStrLn "Hello from Haskell!")
+
+
+
+printVEvent :: IO ()
+printVEvent = do
+  cb <- printFromHaskell
+  let v = vEvent "on-click" cb
+  jsLog $ unVEvent v

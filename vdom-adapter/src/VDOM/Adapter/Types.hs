@@ -3,6 +3,7 @@
 module VDOM.Adapter.Types where
 
 
+import           Control.Applicative
 import           Data.Int
 import           Data.Text
 import           Data.Word
@@ -75,7 +76,7 @@ instance IsJSProp Double where
 
 
 -- | Build a property from a name and value
-buildProp :: IsJSProp a => 
+buildProp :: IsJSProp a =>
              String       -- ^ Property name
              -> a         -- ^ Property value
              -> Property
