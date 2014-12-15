@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE QuasiQuotes       #-}
-module Shakespeare.OpheliaSpec (main, spec) where
+module Shakespeare.OpheliaSpec  where
 
 import           BasicPrelude
 
@@ -11,9 +11,9 @@ import           Text.Trifecta.Result
 import           Test.Hspec
 
 import           Data.String.Here
+import qualified Data.Text            as T
+import qualified Data.Tree            as T
 import           Shakespeare.Ophelia
-import qualified Data.Text as T
-import qualified Data.Tree as T
 
 
 main :: IO ()
@@ -24,6 +24,7 @@ spec = do
   specSimpleParse
   specConvexTree
   specConcavePortions
+  specConcaveConcatenation
 
 specSimpleParse :: Spec
 specSimpleParse = do
@@ -42,6 +43,13 @@ specConcavePortions = do
   describe "Parsing multiple convex sections" $ do
     it "should parse children in the correct order and level" $ do
       specParseForest concaveLinesString concaveLines
+
+specConcaveConcatenation :: Spec
+specConcaveConcatenation = do
+  describe "concatenating strings should concatenate forests" $ do
+    it "should hand the concatenation of forests" $ do
+      specParseForest (repeat10 concaveLinesString) (concat $ replicate 10 concaveLines)
+  where repeat10 xs = (intercalate "\n") $ replicate 10 xs
 
 specParse :: (Show a, Eq a) => Parser a -> String -> a -> Expectation
 specParse parser input expectedResult = do
@@ -81,9 +89,6 @@ simpleParseLines = [
                         [T.Node "Child of Parent Two" []]
                     ]
 
-
-
-
 convexLinesString :: String
 convexLinesString = [here|
 Parent One
@@ -98,6 +103,7 @@ Parent One
   Child Nine
 Parent Two
 |]
+
 
 convexLines :: T.Forest String
 convexLines = [
@@ -118,6 +124,8 @@ convexLines = [
     ]
    ,T.Node "Parent Two" []
   ]
+
+
 
 concaveLinesString :: String
 concaveLinesString = [here|
