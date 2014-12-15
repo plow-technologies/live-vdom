@@ -13,6 +13,7 @@ import           Test.Hspec
 import           Data.String.Here
 import           Shakespeare.Ophelia
 import qualified Data.Text as T
+import qualified Data.Tree as T
 
 
 main :: IO ()
@@ -28,19 +29,19 @@ specSimpleParse :: Spec
 specSimpleParse = do
   describe "simple parsing" $ do
     it "should parse a simple structure" $ do
-      specParseForrest simpleParseString simpleParseLines
+      specParseForest simpleParseString simpleParseLines
 
 specConvexTree :: Spec
 specConvexTree = do
   describe "'Convex tree' parsing" $ do
     it "Should parse a tree with a maximum of two children for each node" $ do
-      specParseForrest convexLinesString convexLines
+      specParseForest convexLinesString convexLines
 
 specConcavePortions :: Spec
 specConcavePortions = do
   describe "Parsing multiple convex sections" $ do
     it "should parse children in the correct order and level" $ do
-      specParseForrest concaveLinesString concaveLines
+      specParseForest concaveLinesString concaveLines
 
 specParse :: (Show a, Eq a) => Parser a -> String -> a -> Expectation
 specParse parser input expectedResult = do
@@ -49,8 +50,8 @@ specParse parser input expectedResult = do
     Success parsed -> parsed `shouldBe` expectedResult
     Failure d -> fail . T.unpack $ show d
 
-specParseForrest :: String -> [Lines] -> Expectation
-specParseForrest = specParse parseLineForrest
+specParseForest :: String -> T.Forest String -> Expectation
+specParseForest st t = specParse parseLineForest st (ParsedTree t)
 
 
 
@@ -66,18 +67,18 @@ Parent Two
 
 |]
 
-simpleParseLines :: [Lines]
+simpleParseLines :: T.Forest String
 simpleParseLines = [
-                      Lines "Parent One" 0
+                      T.Node "Parent One"
                         [
-                          Lines "Child of Parent One 1" 2
+                          T.Node "Child of Parent One 1"
                             [
-                              Lines "Child of Child of Parent One" 4 []
-                            , Lines "Child of Parent One 2" 4 []
+                              T.Node "Child of Child of Parent One"[]
+                            , T.Node "Child of Parent One 2" []
                             ]
                         ]
-                    , Lines "Parent Two" 0
-                        [Lines "Child of Parent Two" 2 []]
+                    , T.Node "Parent Two"
+                        [T.Node "Child of Parent Two" []]
                     ]
 
 
@@ -98,24 +99,24 @@ Parent One
 Parent Two
 |]
 
-convexLines :: [Lines]
+convexLines :: T.Forest String
 convexLines = [
-    Lines "Parent One" 0 [
-      Lines "Child One" 2 [
-        Lines "Child Two" 4 [
-          Lines "Child Three" 6 [
-            Lines "Child Four" 8 [
-              Lines "Child Five" 10 []
+    T.Node "Parent One" [
+      T.Node "Child One" [
+        T.Node "Child Two" [
+          T.Node "Child Three" [
+            T.Node "Child Four" [
+              T.Node "Child Five" []
             ]
-           ,Lines "Child Six" 8 []
+           ,T.Node "Child Six" []
           ]
-        ,Lines "Child Seven" 6 []
+        ,T.Node "Child Seven" []
         ]
-      ,Lines "Child Eight" 4 []
+      ,T.Node "Child Eight" []
       ]
-    ,Lines "Child Nine" 2 []
+    ,T.Node "Child Nine" []
     ]
-   ,Lines "Parent Two" 0 []
+   ,T.Node "Parent Two" []
   ]
 
 concaveLinesString :: String
@@ -137,27 +138,27 @@ Parent One
       Child Fourteen
 |]
 
-concaveLines :: [Lines]
+concaveLines :: T.Forest String
 concaveLines = [
-    Lines "Parent One" 0 [
-      Lines "Child One" 2 [
-        Lines "Child Two" 4 []
-       ,Lines "Child Three" 4 [
-          Lines "Child Four" 6 [
-            Lines "Child Five" 8 [
-              Lines "Child Six" 10 []
+    T.Node "Parent One" [
+      T.Node "Child One" [
+        T.Node "Child Two" []
+       ,T.Node "Child Three" [
+          T.Node "Child Four" [
+            T.Node "Child Five" [
+              T.Node "Child Six" []
             ]
-           ,Lines "Child Seven" 8 []
+           ,T.Node "Child Seven" []
           ]
-       ,Lines "Child Eight" 6 []
+       ,T.Node "Child Eight" []
         ]
-      ,Lines "Child Nine" 4 []
-      ,Lines "Child Ten" 4 []
-      ,Lines "Child Eleven" 4 []
+      ,T.Node "Child Nine" []
+      ,T.Node "Child Ten" []
+      ,T.Node "Child Eleven" []
       ]
-      ,Lines "Child Twelve" 2 [
-        Lines "Child Thirteen" 4 [
-          Lines "Child Fourteen" 6 []
+      ,T.Node "Child Twelve" [
+        T.Node "Child Thirteen" [
+          T.Node "Child Fourteen" []
         ]
       ]
     ]

@@ -7,20 +7,16 @@ module Shakespeare.Ophelia where
 import           BasicPrelude
 import           Control.Applicative
 import           Data.Foldable
-import           Data.String.Here
+import qualified Data.Tree as T
 
 
 import           Text.Parser.Char
 import           Text.Parser.Combinators
-import qualified Text.Trifecta.Delta     as D
 import           Text.Trifecta.Parser
-import           Text.Trifecta.Result
 
-data Lines = Lines {
-  lineLine     :: String
-, currentLevel :: Int
-, lineChildren :: [Lines]
-} deriving (Eq, Show)
+
+type PrepositionTree a = T.Tree (Int,a)
+newtype ParsedTree a = ParsedTree { unParsedTree :: [T.Tree a] } deriving (Eq, Show)
 
 
 splitLines :: Parser [[Char]]
@@ -41,19 +37,26 @@ parseLines :: Parser [(Int,String)]
 parseLines = manyTill parseLine eofNewLine
 
 
-toLines :: (Int,String) -> Lines
-toLines (level,val) = Lines val level []
+toPrepostionTree :: (Int,String) -> PrepositionTree String
+toPrepostionTree = flip T.Node []
 
-reverseChildren :: Lines -> Lines
-reverseChildren (Lines l lv ch) = Lines l lv $ reverse (reverseChildren <$> ch) 
+reverseChildren :: PrepositionTree a -> PrepositionTree a
+reverseChildren (T.Node nodeLabel nodeChildren) = T.Node nodeLabel (reverse (reverseChildren <$> nodeChildren))
 
-parseLineForrest :: Parser [Lines]
-parseLineForrest = do
+
+toTree :: PrepositionTree a -> T.Tree a
+toTree prepTree = snd <$> (reverseChildren prepTree)
+
+toParsedTree :: [PrepositionTree a] -> ParsedTree a
+toParsedTree = ParsedTree . reverse . (fmap toTree)
+
+parseLineForest :: Parser (ParsedTree String)
+parseLineForest = do
   xs <- parseLines
-  xs' <- foldlM insertAtLevel [] (toLines <$> xs)
-  return . reverse $ reverseChildren <$> xs'
+  xs' <- foldlM insertAtLevel [] (toPrepostionTree <$> xs)
+  return $ toParsedTree xs'
 
-insertAtLevel :: (Monad m, Functor m) => [Lines] -> Lines -> m [Lines]
+insertAtLevel :: (Monad m, Functor m) => [PrepositionTree a] -> PrepositionTree a -> m [PrepositionTree a]
 insertAtLevel [] new = return $ [new]
 insertAtLevel (old:xs) new = case compare newLevel oldLevel of
                               EQ -> return $ new:old:xs
@@ -61,41 +64,9 @@ insertAtLevel (old:xs) new = case compare newLevel oldLevel of
                               LT -> return $ new:old:xs-- fail $ "Unable to add " ++ (lineLine new) ++ ". Unable to find root"  -- Case should never happen
   where newLevel = currentLevel new
         oldLevel = currentLevel old
+        currentLevel = fst . T.rootLabel
         inserted = addInsert old new
-        addInsert (Lines val level ch) newI = Lines val level <$> insertAtLevel ch newI
+        addInsert (T.Node label ch) newI = T.Node label <$> insertAtLevel ch newI
 
 eofNewLine :: Parser ()
 eofNewLine = (eof <|> (void newline))
-
-sampleChildren :: String
-sampleChildren = [here|
-Parent One
-  Child of Parent One 1
-    Child of Child of Parent One
-   Child of Parent One 2
-Parent Two
-  Child of Parent Two
-
-|]
-
--- [Lines "Parent One" 0 [
---     Lines "Child of Parent One 1" 2
---       [Lines "Child of Child of Parent One" 4 []
---        Lines "Child of Parent One 2" 2 []]
---   Lines "Parent Two" 0
---     [Lines "Child of Parent Two" 2 []]]]
-
-
-sampleLines :: [Lines]
-sampleLines = [
-                Lines "Parent One" 0 [Lines "Child of Parent One 1" 2 [Lines "Child of Child of Parent One" 4 [], Lines "Child of Parent One 2" 2 []]]
-              , Lines "Parent Two" 0 [Lines "Child of Parent Two" 2 []]
-              ]
-
-
-testLines :: IO Bool
-testLines = do
-  let Success lList = parseString parseLineForrest (D.Columns 0 0) sampleChildren
-  print lList
-  print sampleLines
-  return (lList == sampleLines)
