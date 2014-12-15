@@ -4,55 +4,65 @@
 module Shakespeare.Ophelia where
 
 
+import           BasicPrelude
 import           Control.Applicative
-import           Data.Functor
+import           Data.Foldable
 import           Data.String.Here
-import           Data.Text
-import           Data.Tree
-import           Debug.Trace
-import           Prelude
+
+
 import           Text.Parser.Char
 import           Text.Parser.Combinators
+import qualified Text.Trifecta.Delta     as D
 import           Text.Trifecta.Parser
+import           Text.Trifecta.Result
 
 data Lines = Lines {
-  line     :: String
-, children :: [Lines]
+  lineLine     :: String
+, currentLevel :: Int
+, lineChildren :: [Lines]
 } deriving (Eq, Show)
-
 
 
 splitLines :: Parser [[Char]]
 splitLines = manyTill (manyTill anyChar newline) eof
 
 spacesCount :: Parser Int
-spacesCount = Prelude.length <$> many (char ' ')
+spacesCount = length <$> many (char ' ')
 
 
-pLine :: Parser (Int,String)
-pLine = do
+parseLine :: Parser (Int,String)
+parseLine = do
   whiteSpaceCount <- spacesCount
   line <- manyTill anyChar eofNewLine
   return (whiteSpaceCount, line)
 
-pLineList :: Int -> Parser (Int, String)
-pLineList level = undefined
+
+parseLines :: Parser [(Int,String)]
+parseLines = manyTill parseLine eofNewLine
 
 
--- prependParentLevels :: [(Int, String)] -> [([Int],String)]
--- prependParentLevels x = fst $ foldl foldFunc [] x
---   where foldFunc :: [([Int],(Int, String))] -> (([Int],String))
--- lineTree :: [(Int, String)] -> [Lines]
--- lineTree xs = lineList
---   where lineList = foldl foldFunc [] xs
+toLines :: (Int,String) -> Lines
+toLines (level,val) = Lines val level []
 
--- foldFunc lineList node =
---   mLast = lastMay lineList
+reverseChildren :: Lines -> Lines
+reverseChildren (Lines l lv ch) = Lines l lv $ reverse (reverseChildren <$> ch) 
 
+parseLineForrest :: Parser [Lines]
+parseLineForrest = do
+  xs <- parseLines
+  xs' <- foldlM insertAtLevel [] (toLines <$> xs)
+  return . reverse $ reverseChildren <$> xs'
 
-
-
-
+insertAtLevel :: (Monad m, Functor m) => [Lines] -> Lines -> m [Lines]
+insertAtLevel [] new = return $ [new]
+insertAtLevel (old:xs) new = case compare newLevel oldLevel of
+                              EQ -> return $ new:old:xs
+                              GT -> (flip (:) xs) <$> inserted
+                              LT -> return $ new:old:xs-- fail $ "Unable to add " ++ (lineLine new) ++ ". Unable to find root"  -- Case should never happen
+  where newLevel = currentLevel new
+        oldLevel = currentLevel old
+        inserted = addInsert old new
+        addInsert (Lines val level ch) newI = Lines val level <$> insertAtLevel ch newI
 
 eofNewLine :: Parser ()
 eofNewLine = (eof <|> (void newline))
@@ -62,7 +72,30 @@ sampleChildren = [here|
 Parent One
   Child of Parent One 1
     Child of Child of Parent One
-  Child of Parent One 2
+   Child of Parent One 2
 Parent Two
   Child of Parent Two
+
 |]
+
+-- [Lines "Parent One" 0 [
+--     Lines "Child of Parent One 1" 2
+--       [Lines "Child of Child of Parent One" 4 []
+--        Lines "Child of Parent One 2" 2 []]
+--   Lines "Parent Two" 0
+--     [Lines "Child of Parent Two" 2 []]]]
+
+
+sampleLines :: [Lines]
+sampleLines = [
+                Lines "Parent One" 0 [Lines "Child of Parent One 1" 2 [Lines "Child of Child of Parent One" 4 [], Lines "Child of Parent One 2" 2 []]]
+              , Lines "Parent Two" 0 [Lines "Child of Parent Two" 2 []]
+              ]
+
+
+testLines :: IO Bool
+testLines = do
+  let Success lList = parseString parseLineForrest (D.Columns 0 0) sampleChildren
+  print lList
+  print sampleLines
+  return (lList == sampleLines)
