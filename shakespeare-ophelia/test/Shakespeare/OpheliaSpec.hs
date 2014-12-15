@@ -13,7 +13,7 @@ import           Test.Hspec
 import           Data.String.Here
 import qualified Data.Text            as T
 import qualified Data.Tree            as T
-import           Shakespeare.Ophelia
+import           Shakespeare.Ophelia.Parser
 
 
 main :: IO ()
