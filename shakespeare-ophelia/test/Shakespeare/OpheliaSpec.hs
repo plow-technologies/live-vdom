@@ -25,6 +25,7 @@ spec = do
   specConvexTree
   specConcavePortions
   specConcaveConcatenation
+  specMultiLevels
 
 specSimpleParse :: Spec
 specSimpleParse = do
@@ -50,6 +51,12 @@ specConcaveConcatenation = do
     it "should hand the concatenation of forests" $ do
       specParseForest (repeat10 concaveLinesString) (concat $ replicate 10 concaveLines)
   where repeat10 xs = (intercalate "\n") $ replicate 10 xs
+
+specMultiLevels :: Spec
+specMultiLevels = do
+  describe "Multiple space tree" $ do
+    it "Should parse a tree that uses both 2 and 3 spaces" $ do
+      specParseForest multiLevelsString multiLevels
 
 specParse :: (Show a, Eq a) => Parser a -> String -> a -> Expectation
 specParse parser input expectedResult = do
@@ -170,4 +177,42 @@ concaveLines = [
         ]
       ]
     ]
+  ]
+
+multiLevelsString :: String
+multiLevelsString = [here|
+Parent One
+  Child One
+    Child Two
+   Child Three
+      Child Four
+ Child Five
+   Child Six
+       Child Seven
+               Child Eight
+          Child Nine
+      Child Ten
+Parent Two
+|]
+
+multiLevels :: T.Forest String
+multiLevels = [
+    T.Node "Parent One" [
+      T.Node "Child One" [
+        T.Node "Child Two" []
+       ,T.Node "Child Three" [
+          T.Node "Child Four" []
+       ]
+      ]
+     ,T.Node "Child Five" [
+        T.Node "Child Six" [
+          T.Node "Child Seven" [
+            T.Node "Child Eight" []
+          , T.Node "Child Nine" []
+          ]
+         ,T.Node "Child Ten" []
+        ]
+      ]
+    ]
+  , T.Node "Parent Two" []
   ]
