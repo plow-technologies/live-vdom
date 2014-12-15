@@ -4,23 +4,34 @@
 module Shakespeare.Ophelia.Parser (
   parseLineForest
 , ParsedTree(..)
+, fromTree
 )
 where
 
 
-import           BasicPrelude hiding (foldl)
+import           BasicPrelude            hiding (foldl)
 import           Control.Applicative
 import           Data.Foldable
-import qualified Data.Tree as T
+import qualified Data.Tree               as T
 
 
+import           Data.Traversable
 import           Text.Parser.Char
 import           Text.Parser.Combinators
+import           Text.Trifecta.Delta
 import           Text.Trifecta.Parser
+import           Text.Trifecta.Result
 
 
 type PrepositionTree a = T.Tree (Int,a)
 newtype ParsedTree a = ParsedTree { unParsedTree :: [T.Tree a] } deriving (Eq, Show)
+
+
+fromTree :: Parser ([a] -> a) -> ParsedTree String -> Result [a]
+fromTree builder (ParsedTree xs) = traverse fromTree' xs
+  where fromTree' (T.Node st ch) = res <*> children
+          where res = parseString builder (Columns 0 0) st
+                children = traverse fromTree' ch
 
 -- | Parse a string to a parsed tree. This is a whitespaces parsed tree
 parseLineForest :: Parser (ParsedTree String)

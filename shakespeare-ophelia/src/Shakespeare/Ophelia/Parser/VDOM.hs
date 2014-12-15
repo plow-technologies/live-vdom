@@ -11,16 +11,29 @@ import           VDOM.Adapter
 import           Text.Parser.Char
 import           Text.Parser.Combinators
 import           Text.Trifecta.Parser
+import           Text.Trifecta.Delta
+import           Text.Trifecta.Result
 import Text.Parser.Token
 import Data.Text
+import Data.String.Here
 
 
-parseVNode :: Parser VNodeAdapter
+import Shakespeare.Ophelia.Parser
+
+parseVNodeS :: String -> Result (Result [VNodeAdapter])
+parseVNodeS x = (fromTree parseVNode) <$> (parseString parseLineForest (Columns 0 0) x)
+
+-- parseVNode :: Parser VNodeAdapter
+parseVNode :: Parser ([VNodeAdapter] -> VNodeAdapter)
 parseVNode = angles $ do
   tagName <- manyTill alphaNum space
   props <- many parseAttribute
-  return $ VNode tagName props []
+  return $ VNode tagName props
 
+test = [here|
+<div test="5">
+  <achild ishere="equals5">
+|]
 
 parseAttribute :: Parser Property
 parseAttribute = do
