@@ -1,6 +1,6 @@
-{-# LANGUAGE NoImplicitPrelude #-}
-{-# LANGUAGE QuasiQuotes       #-}
-{-# LANGUAGE ScopedTypeVariables       #-}
+{-# LANGUAGE NoImplicitPrelude   #-}
+{-# LANGUAGE QuasiQuotes         #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Shakespeare.Ophelia.Parser.VDOM where
 
@@ -11,18 +11,18 @@ import           VDOM.Adapter
 
 import qualified Data.Foldable              as F
 import           Data.String.Here
-import           Data.Text                  hiding (length)
+import           Data.Text                  hiding (length, null)
 
 import           Text.Parser.Char
 import           Text.Parser.Combinators
+import           Text.Parser.LookAhead
 import           Text.Parser.Token
 import           Text.Trifecta.Delta
 import           Text.Trifecta.Parser
 import           Text.Trifecta.Result
-import qualified Data.Tree as T
-import qualified Data.Traversable as T
 
-
+import qualified Data.Traversable           as T
+import qualified Data.Tree                  as T
 
 import           Shakespeare.Ophelia.Parser
 
@@ -41,7 +41,7 @@ parseVNodeAdapter = (parseVNode) <|> (parseVText)
 
 parseVNode :: (Monad m) => Parser ([VNodeAdapter] -> m VNodeAdapter)
 parseVNode = angles $ do
-  tagName <- manyTill alphaNum space
+  tagName <- manyTill alphaNum (space <|> (lookAhead $ char '>'))
   props <- many parseAttribute
   (return $ \children -> return $ VNode tagName props children) <?> "VNode"
 
@@ -54,18 +54,21 @@ parseVText = do
 
 test = [here|
 <div test="5">
-  <achild ishere="equals5">
+  <achild ishere="equals5" anotherProp="Hello">
     Some child text is here
       while some more child text
     but there is some child text here too
-    <this should="fail">
+    <this should="fail" doesThis="Work?" ithink="4">
 |]
 
 parseAttribute :: Parser Property
 parseAttribute = do
-  name <- manyTill alphaNum $ char '='
+  _ <- spaces
+  name <- manyTill (noneOf [' ', '>']) $ char '='
   val <- parseJSProp
-  return $ Property name val
+  if null name 
+    then fail "Unable to have empty proprty value"
+    else return $ Property name val
 
 parseJSProp :: Parser JSProp
 parseJSProp =  parseJSPInt <|> parseJSPDouble <|> (JSPText <$> stringLiteral) <|> (JSPText <$> stringLiteral')

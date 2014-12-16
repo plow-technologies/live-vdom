@@ -13,7 +13,7 @@ import           Data.Word
 data Property = Property {
   propertyName  :: String
 , propertyValue :: JSProp
-} deriving (Show)
+} deriving (Show, Eq)
 
 type TagName = String
 
@@ -24,7 +24,7 @@ type TagName = String
 data VNodeAdapter =
      VText {virtualText :: String } -- ^ Child text with  no tag name, properties, or children
    | VNode {vNodeTagName :: TagName, vNodePropsList :: [Property], vNodeChildren :: [VNodeAdapter]} -- ^ Basic tree structor for a node with children and properties
-    deriving (Show)
+    deriving (Show, Eq)
 
 
 -- | The types that are representable in javascript
@@ -41,7 +41,7 @@ data JSProp = JSPBool Bool
             | JSPWord32 Word32
             | JSPFloat Float
             | JSPDouble Double
-    deriving (Show)
+    deriving (Show, Eq)
 
 -- | A provisional class to make building a JSProp
 -- easier

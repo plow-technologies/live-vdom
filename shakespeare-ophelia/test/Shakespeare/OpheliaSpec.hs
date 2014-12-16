@@ -4,16 +4,18 @@ module Shakespeare.OpheliaSpec  where
 
 import           BasicPrelude
 
-import qualified Text.Trifecta.Delta  as D
+import qualified Text.Trifecta.Delta        as D
 import           Text.Trifecta.Parser
 import           Text.Trifecta.Result
 
 import           Test.Hspec
 
 import           Data.String.Here
-import qualified Data.Text            as T
-import qualified Data.Tree            as T
+import qualified Data.Text                  as T
+import qualified Data.Tree                  as T
 import           Shakespeare.Ophelia.Parser
+import           Shakespeare.Parser
+import           Shakespeare.Parser.VDOM
 
 
 main :: IO ()
@@ -26,6 +28,7 @@ spec = do
   specConcavePortions
   specConcaveConcatenation
   specMultiLevels
+  specParser
 
 specSimpleParse :: Spec
 specSimpleParse = do
