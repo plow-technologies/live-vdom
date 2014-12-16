@@ -1,21 +1,25 @@
-{-# LANGUAGE NoImplicitPrelude #-}
-{-# LANGUAGE QuasiQuotes       #-}
+{-# LANGUAGE NoImplicitPrelude   #-}
+{-# LANGUAGE QuasiQuotes         #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Shakespeare.Ophelia.Parser (
   parseLineForest
 , ParsedTree(..)
 , fromTree
+, parseStringTrees
 )
 where
 
 
-import           BasicPrelude            hiding (foldl)
+import           BasicPrelude            hiding (foldl, sequence)
 import           Control.Applicative
 import           Data.Foldable
+import qualified Data.Foldable as F
 import qualified Data.Tree               as T
 
 
 import           Data.Traversable
+import qualified Data.Traversable        as T
 import           Text.Parser.Char
 import           Text.Parser.Combinators
 import           Text.Trifecta.Delta
@@ -27,11 +31,37 @@ type PrepositionTree a = T.Tree (Int,a)
 newtype ParsedTree a = ParsedTree { unParsedTree :: [T.Tree a] } deriving (Eq, Show)
 
 
-fromTree :: Parser ([a] -> a) -> ParsedTree String -> Result [a]
-fromTree builder (ParsedTree xs) = traverse fromTree' xs
-  where fromTree' (T.Node st ch) = res <*> children
-          where res = parseString builder (Columns 0 0) st
-                children = traverse fromTree' ch
+-- fromTree :: (Monad m) => Parser ([a] -> m a) -> ParsedTree String -> m (Result [a])
+-- fromTree builder (ParsedTree xs) = undefined -- sequence $ traverse fromTree' xs
+--   where fromTree' (T.Node st ch) = do
+--                                     children <- traverse fromTree' ch
+--                                     -- res <*> children
+--                                     undefined
+--           where res = parseString builder (Columns 0 0) st
+
+
+joinR :: (Result (Result a)) -> Result a
+joinR (Failure doc) = Failure doc
+joinR (Success d) = d
+
+parseStringTrees :: (Applicative f, Monad f) =>Parser ([a] -> f a) -> String -> f (Result [a])
+parseStringTrees builder str = do
+  let parsedTrees = parseString parseLineForest (Columns 0 0) str -- Result (ParsedTree String)
+  joinR <$> (T.sequenceA $ (fromTree builder) <$> parsedTrees)
+
+
+fromTree :: (Monad m, Functor m) => Parser ([a] -> m a) -> ParsedTree String -> m (Result [a])
+fromTree builder (ParsedTree xs) = do
+  trees <- T.mapM (fromTree' builder) xs
+  return $ sequenceA trees
+
+fromTree' :: (Monad m, Functor m) => Parser ([a] -> m a) -> T.Tree String -> m (Result a)
+fromTree' builder (T.Node st ch) = do
+  let buildT = parseString builder (Columns 0 0) st 
+  ch' <- T.sequenceA <$> T.forM ch (fromTree' builder) 
+  T.sequence $ buildT <*> ch'
+
+
 
 -- | Parse a string to a parsed tree. This is a whitespaces parsed tree
 parseLineForest :: Parser (ParsedTree String)
