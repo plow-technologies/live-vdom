@@ -53,7 +53,9 @@ executable example
                   shakespeare-dynamic,
                   vdom-adapter,
                   text,
-                  aeson
+                  aeson,
+                  here,
+                  shakespeare-ophelia
   ghcjs-Options:    -O -Wall
 
 Test-Suite spec

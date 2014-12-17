@@ -24,7 +24,6 @@ Library
                       , here
                       , containers
                       , safe
-                      , basic-prelude
                       , vdom-adapter
 
 Test-Suite spec
@@ -42,7 +41,6 @@ Test-Suite spec
                       , here
                       , containers
                       , safe
-                      , basic-prelude
                       , vdom-adapter
                       
 Source-Repository head

@@ -37,6 +37,7 @@ import qualified VDOM.Adapter as VDA
 import           Control.Arrow
 
 import qualified Data.Text as T
+import Data.String.Here
 
 
 red :: JSString
@@ -163,6 +164,10 @@ main = do
   [js_| document.body.appendChild(`root); |]
   let s = mkState 167 101 10 20
   oneFrameAnimate root emptyDiv
+
+
+
+
 
 
 exampleVNode :: VDA.VNodeAdapter

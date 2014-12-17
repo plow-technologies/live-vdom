@@ -11,11 +11,11 @@ module Shakespeare.Ophelia.Parser (
 where
 
 
-import           BasicPrelude            hiding (foldl, sequence)
 import           Control.Applicative
+import           Control.Monad
 import           Data.Foldable
-import qualified Data.Foldable as F
 import qualified Data.Tree               as T
+import           Prelude                 hiding (foldl, sequence)
 
 
 import           Data.Traversable
@@ -31,13 +31,6 @@ type PrepositionTree a = T.Tree (Int,a)
 newtype ParsedTree a = ParsedTree { unParsedTree :: [T.Tree a] } deriving (Eq, Show)
 
 
--- fromTree :: (Monad m) => Parser ([a] -> m a) -> ParsedTree String -> m (Result [a])
--- fromTree builder (ParsedTree xs) = undefined -- sequence $ traverse fromTree' xs
---   where fromTree' (T.Node st ch) = do
---                                     children <- traverse fromTree' ch
---                                     -- res <*> children
---                                     undefined
---           where res = parseString builder (Columns 0 0) st
 
 
 joinR :: (Result (Result a)) -> Result a
@@ -57,8 +50,8 @@ fromTree builder (ParsedTree xs) = do
 
 fromTree' :: (Monad m, Functor m) => Parser ([a] -> m a) -> T.Tree String -> m (Result a)
 fromTree' builder (T.Node st ch) = do
-  let buildT = parseString builder (Columns 0 0) st 
-  ch' <- T.sequenceA <$> T.forM ch (fromTree' builder) 
+  let buildT = parseString builder (Columns 0 0) st
+  ch' <- T.sequenceA <$> T.forM ch (fromTree' builder)
   T.sequence $ buildT <*> ch'
 
 
@@ -93,11 +86,6 @@ parseLine = do
   whiteSpaceCount <- spacesCount
   line <- manyTill anyChar eofNewLine
   return (whiteSpaceCount, line)
-
-parseLineT :: Parser (PrepositionTree String)
-parseLineT = do
-  label <- parseLine
-  return $ T.Node label []
 
 -- Parse a group of lines
 parseLines :: Parser [(Int,String)]
