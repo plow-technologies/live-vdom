@@ -1,11 +1,10 @@
 module Shakespeare.Dynamic where
 
-import Shakespeare.Dynamic.Internal
 
 
 import Text.Hamlet.Parse
 
-import GHCJS.VDOM
+import GHCJS.VDOM ()
 
 {-| Hamlet.Parse Data Types Imported for reference
 
@@ -71,5 +70,5 @@ newtype Module = Module [String]
 |-}
 
 
-
+testParseLines :: Result (Maybe NewlineStyle, [Doc])
 testParseLines = parseDoc defaultHamletSettings "<h1> test" 

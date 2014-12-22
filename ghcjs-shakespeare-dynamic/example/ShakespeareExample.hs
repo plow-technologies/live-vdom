@@ -79,8 +79,8 @@ emptyOut = spawn Unbounded
 
 
 
-renderDom :: DOMNode -> VNode -> Consumer VDA.VNodeAdapter IO ()
-renderDom root initial = do
+renderDom :: IO DOMNode -> VNode -> Consumer VDA.VNodeAdapter IO ()
+renderDom getContainer initial = do
   vna <- await
   newNode <- liftIO $ toVNode vna
   let p = diff initial newNode
@@ -89,9 +89,9 @@ renderDom root initial = do
     print vna
     [js|console.log(`unv)|] :: IO ()
     putStrLn "redrawing"
-    root' <- [js|document.body.childNodes[1]|]
+    root' <- getContainer
     newNode `seq` redraw root' p
-  renderDom root newNode
+  renderDom getContainer newNode
 
 
 data State = State { x  :: !Int, y  :: !Int
@@ -202,14 +202,15 @@ atAnimationFrame m = do
 
 main :: IO ()
 main = do
-  root <- [js| document.createElement('div') |] :: IO DOMNode
-  [js_| document.body.appendChild(`root); |] :: IO ()
+  container <- [js| document.createElement('div') |] :: IO DOMNode
+  [js_| document.body.appendChild(`container); |] :: IO ()
   let s = mkState 167 101 10 20
   (o,i) <- emptyOut
   forkIO $ do
     runEffect $ produceVDom >-> toOutput o
     performGC
-  forever $ runEffect $ fromInput i >-> (renderDom root emptyDiv)
+  let getContainer = [js|document.body.childNodes[1]|]
+  forever $ runEffect $ fromInput i >-> (renderDom getContainer emptyDiv)
 
 
 

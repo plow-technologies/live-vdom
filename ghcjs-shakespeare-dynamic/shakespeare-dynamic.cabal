@@ -20,6 +20,7 @@ Library
   GHC-Options:          -Wall
   Exposed-Modules:      Shakespeare.Dynamic
                         Shakespeare.Dynamic.Adapter
+                        Shakespeare.Dynamic.Render
   Other-Modules:        Shakespeare.Dynamic.Internal
   Build-Depends:        base >= 4 && < 5
                       , template-haskell
@@ -35,6 +36,8 @@ Library
                       , aeson
                       , shakespeare-ophelia
                       , safe
+                      , pipes
+                      , pipes-concurrency
 
 
 executable example
