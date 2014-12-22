@@ -70,11 +70,13 @@ instance ToJSRef (PropList) where
 
 
 -- Convert a VNodeAdapter to a VNode in order to diff it with vdom
-toVNode :: VNodeAdapter -> VD.VNode
-toVNode (VNode aTagName aProps aChildren) = VD.js_vnode tagName props $ mChildren aChildren
+toVNode :: VNodeAdapter -> IO (VD.VNode)
+toVNode (VNode aTagName aProps aChildren) = do
+  props <- VD.toProperties . castRef <$> (toJSRef $ PropList aProps)
+  children <- TR.mapM toVNode aChildren
+  return $ VD.js_vnode tagName props $ mChildren children
   where tagName = toJSString aTagName
-        props = VD.toProperties . castRef . unsafePerformIO . toJSRef $ PropList aProps
         mChildren [] = VD.noChildren
-        mChildren xs = VD.mkChildren $ toVNode <$> aChildren
-toVNode (VText inner) = VD.text $ toJSString inner
+        mChildren xs = VD.mkChildren xs
+toVNode (VText inner) = return $ VD.text $ toJSString inner
 
