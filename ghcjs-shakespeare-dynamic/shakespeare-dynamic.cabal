@@ -37,7 +37,6 @@ Library
                       , shakespeare-ophelia
                       , safe
                       , pipes
-                      , pipes-concurrency
 
 
 executable example
