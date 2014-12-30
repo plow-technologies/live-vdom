@@ -21,11 +21,11 @@ import qualified GHCJS.VDOM as VD
 import           System.IO.Unsafe    (unsafePerformIO)
 
 
--- The orphan instance is to seperate the GHCJS dependency
--- from the JSProp definition
--- This just pushes the data into a JSRef and then casts
--- it back to the correct type so that
--- toJSRef :: JSProp -> IO (JSRef JSProp)
+-- | The orphan instance is to seperate the GHCJS dependency
+--   from the JSProp definition
+--   This just pushes the data into a JSRef and then casts
+--   it back to the correct type so that
+--   toJSRef :: JSProp -> IO (JSRef JSProp)
 instance ToJSRef JSProp where
   toJSRef (JSPText t) = castToJSRef t
   toJSRef (JSPBool b) = castToJSRef b
@@ -41,18 +41,18 @@ instance ToJSRef JSProp where
   toJSRef (JSPDouble d) = castToJSRef d
 
 
--- Push a piece of data into a JSRef and cast it
+-- | Push a piece of data into a JSRef and cast it
 castToJSRef :: ToJSRef a => a -> IO (JSRef b)
 castToJSRef x = castRef <$> toJSRef x
 
 
 
--- Newtype to wrap the [Property] so that
+-- | Newtype to wrap the [Property] so that
 newtype PropList = PropList { unPropList :: [Property]} deriving (Show)
 
 
--- The orphan instance is again to seperate the GHCJS dependency
--- from the definition of property
+-- | The orphan instance is again to seperate the GHCJS dependency
+--   from the definition of property
 instance ToJSRef (PropList) where
   toJSRef (PropList xs) = do
     attr <- newObj
@@ -69,7 +69,7 @@ instance ToJSRef (PropList) where
         return obj
 
 
--- Convert a VNodeAdapter to a VNode in order to diff it with vdom
+-- | Convert a VNodeAdapter to a VNode in order to diff it with vdom
 toVNode :: VNodeAdapter -> IO (VD.VNode)
 toVNode (VNode aTagName aProps aChildren) = do
   props <- VD.toProperties . castRef <$> (toJSRef $ PropList aProps)

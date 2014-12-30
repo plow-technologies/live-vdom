@@ -28,7 +28,13 @@ import qualified VDOM.Adapter                as VDA
 
 import           Pipes
 
-renderDom :: IO DOMNode -> VNode -> IO a -> Consumer VDA.VNodeAdapter IO ()
+
+
+-- | Create a pipe to render VDom whenever it's updated
+renderDom :: IO DOMNode -- ^ Container ov the vdom
+          -> VNode      -- ^ Initial VDom
+          -> IO a       -- ^ Finalizer action to be ran (for event registering etc.)
+          -> Consumer VDA.VNodeAdapter IO () -- ^ Consumer to push VDom to
 renderDom getContainer initial finalizer = do
   vna <- await
   newNode <- liftIO $ toVNode vna
