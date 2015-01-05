@@ -16,7 +16,6 @@ module Shakespeare.Dynamic.Render (
 
 import           Prelude                     hiding (div)
 
-import           System.IO
 
 import           GHCJS.Foreign
 import           GHCJS.Foreign.QQ
@@ -31,15 +30,15 @@ import           Pipes
 
 
 -- | Create a pipe to render VDom whenever it's updated
-renderDom :: IO DOMNode -- ^ Container ov the vdom
-          -> VNode      -- ^ Initial VDom
-          -> IO a       -- ^ Finalizer action to be ran (for event registering etc.)
+renderDom :: IO DOMNode                      -- ^ Container ov the vdom
+          -> VNode                           -- ^ Initial VDom
+          -> IO a                            -- ^ Finalizer action to be ran (for event registering etc.)
           -> Consumer VDA.VNodeAdapter IO () -- ^ Consumer to push VDom to
 renderDom getContainer initial finalizer = do
   vna <- await
   newNode <- liftIO $ toVNode vna
   let pa = diff initial newNode
-  liftIO $ do
+  _ <- liftIO $ do
     root <- getContainer
     redraw root pa
     finalizer
