@@ -40,8 +40,6 @@ Library
 
 
 executable example
-  if !flag(build-example)
-      buildable: False
   Main-Is:        ShakespeareExample.hs
   cpp-options: -DGHCJS_NO_CATCH_MAINLOOP
   Default-Language: Haskell2010

@@ -11,6 +11,7 @@
 
 module Shakespeare.Dynamic.Render (
   renderDom
+, LiveDom
 ) where
 
 
@@ -32,17 +33,16 @@ import           Pipes
 -- | Create a pipe to render VDom whenever it's updated
 renderDom :: IO DOMNode                      -- ^ Container ov the vdom
           -> VNode                           -- ^ Initial VDom
-          -> IO a                            -- ^ Finalizer action to be ran (for event registering etc.)
-          -> Consumer VDA.VNodeAdapter IO () -- ^ Consumer to push VDom to
-renderDom getContainer initial finalizer = do
-  vna <- await
+          -> Consumer (VDA.VNodeAdapter, IO ()) IO () -- ^ Consumer to push VDom to with a finalizer
+renderDom getContainer initial = do
+  (vna, finalizer) <- await
   newNode <- liftIO $ toVNode vna
   let pa = diff initial newNode
   _ <- liftIO $ do
     root <- getContainer
     redraw root pa
     finalizer
-  renderDom getContainer newNode finalizer
+  renderDom getContainer newNode
 
 redraw :: DOMNode -> Patch -> IO ()
 redraw node pa = pa `seq` atAnimationFrame (patch node pa)
@@ -51,3 +51,5 @@ atAnimationFrame :: IO () -> IO ()
 atAnimationFrame m = do
   cb <- syncCallback AlwaysRetain False m
   [js_| window.requestAnimationFrame(`cb); |]
+
+type LiveDom = (VDA.VNodeAdapter, IO ())

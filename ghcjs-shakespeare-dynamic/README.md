@@ -40,3 +40,7 @@ data VDom = VNode -- With children
           | VText -- Without children
 
 ```
+
+
+
+If compiling fails due to transformers/transformers-compat, try to install them first and then run ```cabal install```
