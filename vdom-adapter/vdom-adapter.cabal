@@ -19,6 +19,8 @@ Library
   Build-Depends:        base >= 4 && < 5
                       , aeson
                       , text
+                      , template-haskell
+                      , th-lift-instances
 
 Test-Suite spec
   Type:                 exitcode-stdio-1.0

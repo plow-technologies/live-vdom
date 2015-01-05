@@ -1,12 +1,18 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE OverloadedStrings  #-}
 
 module VDOM.Adapter.Types where
 
 
 import           Control.Applicative
+import           Control.Monad
 import           Data.Int
 import           Data.Text
-import           Data.Word
+import           Data.Typeable
+
+import           Instances.TH.Lift
+
+import           Language.Haskell.TH.Syntax
 
 -- | A javascript property like 'input=value'
 -- or even 'ng-click="function()"'
@@ -15,6 +21,12 @@ data Property = Property {
 , propertyValue :: JSProp
 } deriving (Show, Eq)
 
+
+instance Lift Property where
+  lift (Property pName pVal) = AppE <$> (AppE (ConE propName) <$> (lift pName)) <*> (lift pVal)
+
+propName :: Name
+propName = mkVdomName "Property"
 type TagName = String
 
 
@@ -24,25 +36,37 @@ type TagName = String
 data VNodeAdapter =
      VText {virtualText :: String } -- ^ Child text with  no tag name, properties, or children
    | VNode {vNodeTagName :: TagName, vNodePropsList :: [Property], vNodeChildren :: [VNodeAdapter]} -- ^ Basic tree structor for a node with children and properties
-    deriving (Show, Eq)
+    deriving (Show, Eq, Typeable)
 
 
+instance Lift VNodeAdapter where
+  lift (VText st) = AppE (ConE $ mkVdomName "VText") <$> (lift st)
+  lift (VNode tn pList vc) = AppE <$> (AppE <$> (AppE (ConE $ mkVdomName "VNode") <$> (lift tn)) <*> (lift pList)) <*> (lift vc)
 -- | The types that are representable in javascript
 -- tag values
 data JSProp = JSPBool Bool
             | JSPText Text
             | JSPInt Int
-            | JSPInt8 Int8
-            | JSPInt16 Int16
-            | JSPInt32 Int32
-            | JSPWord Word
-            | JSPWord8 Word8
-            | JSPWord16 Word16
-            | JSPWord32 Word32
             | JSPFloat Float
             | JSPDouble Double
     deriving (Show, Eq)
 
+instance Lift JSProp where
+  lift (JSPBool b) = AppE (ConE jsBoolName) <$> lift b
+  lift (JSPText t) = AppE (ConE jsTextName) <$> lift t
+  lift (JSPInt i) = AppE (ConE jsIntName) <$> lift i
+  lift (JSPFloat f) = AppE (ConE jsFloatName) <$> lift f
+  lift (JSPDouble d) = AppE(ConE jsDoubleName) <$> lift d
+
+jsBoolName, jsTextName, jsIntName, jsFloatName, jsDoubleName :: Name
+jsBoolName = mkVdomName "JSPBool"
+jsTextName = mkVdomName "JSPText"
+jsIntName = mkVdomName "JSPInt"
+jsFloatName = mkVdomName "JSPFloat"
+jsDoubleName = mkVdomName "JSPDouble"
+
+mkVdomName :: String -> Name
+mkVdomName = mkName
 -- | A provisional class to make building a JSProp
 -- easier
 
@@ -55,20 +79,6 @@ instance IsJSProp Text where
     toJSProp = JSPText
 instance IsJSProp Int where
     toJSProp = JSPInt
-instance IsJSProp Int8 where
-    toJSProp = JSPInt8
-instance IsJSProp Int16 where
-    toJSProp = JSPInt16
-instance IsJSProp Int32 where
-    toJSProp = JSPInt32
-instance IsJSProp Word where
-    toJSProp = JSPWord
-instance IsJSProp Word8 where
-    toJSProp = JSPWord8
-instance IsJSProp Word16 where
-    toJSProp = JSPWord16
-instance IsJSProp Word32 where
-    toJSProp = JSPWord32
 instance IsJSProp Float where
     toJSProp = JSPFloat
 instance IsJSProp Double where

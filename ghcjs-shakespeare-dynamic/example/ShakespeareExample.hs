@@ -11,44 +11,31 @@
 
 module Main where
 
-
-import           Control.Applicative
-import           Control.Concurrent hiding (yield)
-import           Data.IntMap                 (IntMap)
-import qualified Data.IntMap                 as IM
+-- Base
+import           Control.Concurrent              (threadDelay)
+import           Control.Monad                   (forever)
 import           Data.Maybe
-import           Prelude                     hiding (div)
+import           Data.String.Here
+import qualified Data.Text                       as T
+import           Pipes
+import           Pipes.Concurrent
+import           Prelude                         hiding (div)
 
-import           Data.Aeson
+-- Used for importing parsing because
+-- The quasiquoting isn't done
+import qualified Text.Trifecta.Result            as R
 
-import qualified Text.Trifecta.Result as R
-
-
-import           System.IO
-
+-- GHCJS/VDom/Ophelia
 import           GHCJS.Foreign
 import           GHCJS.Foreign.QQ
-import           GHCJS.Types
 import           GHCJS.VDOM
-import           GHCJS.VDOM.QQ
-
-import Shakespeare.Ophelia.Parser.VDOM
-
-import           Shakespeare.Dynamic.Adapter
 import           Shakespeare.Dynamic.Render
+import           Shakespeare.Ophelia.Parser.VDOM
+import qualified VDOM.Adapter                    as VDA
 
-import qualified VDOM.Adapter as VDA
 
-import           Control.Arrow
 
-import qualified Data.Text as T
-import Data.String.Here
-import Data.Functor.Identity
 
-import Pipes.Concurrent
-import Pipes
-import Control.Monad (forever)
-import Control.Concurrent (threadDelay)
 
 
 produceVDom :: Producer LiveDom IO r
@@ -68,12 +55,12 @@ main :: IO ()
 main = do
   container <- [js| document.createElement('div') |] :: IO DOMNode
   [js_| document.body.appendChild(`container); |] :: IO ()
-  (o,i) <- emptyOut
-  forkIO $ do
-    runEffect $ produceVDom >-> toOutput o
+  (out,inp) <- emptyOut
+  _ <- forkIO $ do
+    runEffect $ produceVDom >-> toOutput out
     performGC
   let getContainer = [js|document.body.childNodes[1]|]
-  forever $ runEffect $ fromInput i >-> (renderDom getContainer emptyDiv)
+  forever $ runEffect $ fromInput inp >-> (renderDom getContainer emptyDiv)
 
 
 buildPropS :: String -> T.Text -> VDA.Property
@@ -87,8 +74,8 @@ addOnClick (VNode vn) = do
   return $ VNode vn
 
 exampleNode :: VDA.VNodeAdapter
-exampleNode = a !! 0
-  where (Just (R.Success a)) = exampleNode1
+exampleNode = vns !! 0
+  where (Just (R.Success vns)) = exampleNode1
 
 exampleNode1 :: Maybe (R.Result [VDA.VNodeAdapter])
 exampleNode1 = parseVNodeS exampleStringNode
@@ -111,14 +98,14 @@ exampleStringNode = [here|
     <td>
       Jill
     <td>
-      Smith 
+      Smith
     <td>
       50
   <tr>
     <td>
       Evan
     <td>
-      Jackson 
+      Jackson
     <td>
       941
 |]
@@ -131,14 +118,14 @@ exampleStringNode2 = [here|
     <td>
       Jill
     <td>
-      Smith 
+      Smith
     <td>
       50
   <tr>
     <td>
       Evan
     <td>
-      Jackson 
+      Jackson
     <td>
       10000
 |]
