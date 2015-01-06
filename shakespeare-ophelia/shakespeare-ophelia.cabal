@@ -29,6 +29,7 @@ Library
                       , template-haskell
                       , ansi-wl-pprint
                       , transformers
+                      , split
 
 
 Test-Suite spec
