@@ -40,7 +40,7 @@ toLiveVDomTH (PLiveVNode tn pl ch) = do
   qtn <- lift tn
   qpl <- lift pl
   cExp <- sequence $ toLiveVDomTH <$> ch
-  return $ AppE (AppE (AppE (ConE $ mkName "Live") qtn) qpl) (ListE cExp)
+  return $ AppE (AppE (AppE (ConE $ mkName "LiveVNode") qtn) qpl) (ListE cExp)
 toLiveVDomTH (PLiveChild e) = return $ AppE (ConE  $ mkName "LiveChild") e
 
 
