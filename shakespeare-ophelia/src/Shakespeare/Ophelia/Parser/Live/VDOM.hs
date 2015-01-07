@@ -16,6 +16,7 @@ import           Text.Parser.Char
 import           Text.Parser.Combinators
 import           Text.Parser.LookAhead
 import           Text.Parser.Token
+import           Text.Trifecta.Delta
 import           Text.Trifecta.Parser
 import           Text.Trifecta.Result
 
@@ -40,8 +41,20 @@ parseStaticNode = angles $ do
   (return $ \children -> return $ PLiveVNode tagName props children) <?> "LiveVNode"
 
 buildF :: String -> Exp
-buildF str = foldl (\e app -> AppE e (VarE $ mkName app)) (VarE . mkName . head $ xs) $ tail xs
+buildF str = foldl (\e app -> AppE e (parseLitExpr app)) (parseLitExpr . head $ xs) $ tail xs
   where xs = splitOn " " str
+
+parseLitExpr :: String -> Exp
+parseLitExpr str = fromResult (VarE $ mkName str) $ LitE <$> parseString parseHLit (Columns 0 0) str
+
+fromResult :: a -> Result a -> a
+fromResult _ (Success s) = s
+fromResult s _ = s
+
+parseHLit :: Parser Lit
+parseHLit = (CharL <$> charLiteral) <|> (StringL <$> stringLiteral)
+        <|> (IntegerL <$> integer) <|> (DoublePrimL . toRational <$> double)
+
 
 removeTogether :: (Eq a) =>  a -> [a] -> [a]
 removeTogether a str = foldr go [] str

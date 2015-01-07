@@ -73,7 +73,7 @@ testSimpleInsert = let val = 4 in [gertrude|
 <some header="value">
   <with children="nodes">
     <some other="test">
-      #{show val}
+      #{show 4}
   <and some="other values">
 |]
 
