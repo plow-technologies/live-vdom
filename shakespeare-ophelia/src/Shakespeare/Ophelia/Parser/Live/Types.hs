@@ -1,9 +1,11 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 module Shakespeare.Ophelia.Parser.Live.Types where
 
 import           Control.Applicative
-import           Control.Monad
+import           Control.Monad              hiding (sequence)
 import           Data.Traversable
 import           Pipes.Concurrent
+import           Prelude                    hiding (sequence)
 
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Syntax
@@ -24,13 +26,21 @@ data PLiveVDom =
 
 instance Lift PLiveVDom where
   lift (PLiveVText st) = AppE (ConE $ mkName "PLiveVText") <$> (lift st)
-  lift (PLiveVNode tn pl ch) = AppE <$> (AppE <$> (AppE (ConE $ mkName "PLiveVNode") <$> (lift tn)) <*> (lift pl)) <*> (lift ch)
+  lift (PLiveVNode tn pl ch) = do
+    qtn <- lift tn
+    qpl <- lift pl
+    qch <- lift ch
+    return $ AppE (AppE (AppE (ConE $ mkName "PLiveVNode") qtn) qpl) qch
   lift (PLiveChild e) = return e
 
 -- | Use template haskell to create the live vdom
 toLiveVDomTH :: PLiveVDom -> Q Exp
 toLiveVDomTH (PLiveVText st) = AppE (ConE $ mkName "LiveVText") <$> (lift st)
-toLiveVDomTH (PLiveVNode tn pl ch) = AppE <$> (AppE <$> (AppE (ConE $ mkName "LiveVNode") <$> (lift tn)) <*> (lift pl)) <*> (lift ch)
+toLiveVDomTH (PLiveVNode tn pl ch) = do
+  qtn <- lift tn
+  qpl <- lift pl
+  cExp <- sequence $ toLiveVDomTH <$> ch
+  return $ AppE (AppE (AppE (ConE $ mkName "Live") qtn) qpl) (ListE cExp)
 toLiveVDomTH (PLiveChild e) = return $ AppE (ConE  $ mkName "LiveChild") e
 
 

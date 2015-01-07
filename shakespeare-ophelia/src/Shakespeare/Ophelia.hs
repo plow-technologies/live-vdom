@@ -9,7 +9,6 @@ import           Language.Haskell.TH
 import           Shakespeare.Ophelia.QQ
 import           Language.Haskell.TH.Quote
 
-test :: VNodeAdapter
 test = [gertrude|<table style="width:100%">
                   <tr>
                     <td>
@@ -29,7 +28,6 @@ test = [gertrude|<table style="width:100%">
 |]
 
 
-test2 :: VNodeAdapter
 test2 =  do
   [gertrude|<table style="width:100%">
                   <tr>
@@ -39,7 +37,7 @@ test2 =  do
                       Smith
                     <td>
                       50
-                    ${rslt}
+                    !{undefined}
                   <tr>
                     <td>
                       Evan
@@ -51,5 +49,4 @@ test2 =  do
 
 |]
 
-xs t = [bqq|t|]
 

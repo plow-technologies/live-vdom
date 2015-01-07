@@ -37,7 +37,7 @@ joinR :: (Result (Result a)) -> Result a
 joinR (Failure doc) = Failure doc
 joinR (Success d) = d
 
-parseStringTrees :: (Applicative f, Monad f) =>Parser ([a] -> f a) -> String -> f (Result [a])
+parseStringTrees :: (Applicative f, Monad f) => Parser ([a] -> f a) -> String -> f (Result [a])
 parseStringTrees builder str = do
   let parsedTrees = parseString parseLineForest (Columns 0 0) str -- Result (ParsedTree String)
   joinR <$> (T.sequenceA $ (fromTree builder) <$> parsedTrees)

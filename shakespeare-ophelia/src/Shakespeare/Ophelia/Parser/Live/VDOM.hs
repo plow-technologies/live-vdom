@@ -59,3 +59,12 @@ parseStaticText = do
         addPVText _ vn@(PLiveVNode _ _ _) = fail [i| Unable to add node to text as a node|]
         addPVText _ _ = fail [i|Error, somehow parsed VNode instead of PLiveVText. Please report this as a bug|]
 
+
+stupidTest :: String
+stupidTest = [here|
+<some text="something">
+  <with some="other stuff">
+  !{undefined}
+  <it should="atleast">
+    Successfully parse!
+|]

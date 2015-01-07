@@ -1,4 +1,9 @@
-module Shakespeare.Ophelia.QQ where
+module Shakespeare.Ophelia.QQ (
+  ophelia
+, gertrude
+, module Shakespeare.Ophelia.Parser.Live.Types
+, module Shakespeare.Ophelia.Parser.Live.VDOM 
+) where
 
 import           Control.Monad.IO.Class
 import           Data.List.Split
@@ -13,6 +18,10 @@ import           Language.Haskell.TH.Syntax
 import           Shakespeare.Ophelia.Parser
 import           Shakespeare.Ophelia.Parser.VDOM
 import           VDOM.Adapter
+
+import Shakespeare.Ophelia.Parser.Live.Types
+import Shakespeare.Ophelia.Parser.Live.VDOM
+
 
 import           Text.PrettyPrint.ANSI.Leijen
 import           Text.Trifecta.Result
@@ -39,12 +48,17 @@ gertrudeExp s = do
     Failure fString -> fail $ show fString
 
 
+liveGertrude :: String -> Q Exp
+liveGertrude s = do
+  rN <- parseStringTrees parsePLiveVDom s
+  case rN of
+    Success vn -> if length vn > 1
+                    then fail "One or more nodes can not be the main html. Maybe you're trying to use ophelia?"
+                    else toLiveVDomTH (vn !! 0)
+    Failure fString -> fail $ show fString
+
+
+
+
 gertrude :: QuasiQuoter
-gertrude = QuasiQuoter gertrudeExp undefined undefined undefined
-
-buildF :: String -> Exp
-buildF str = foldl (\e app -> AppE e (VarE $ mkName app)) (VarE . mkName . head $ xs) $ tail xs
-  where xs = splitOn " " str
-
-bqq :: QuasiQuoter
-bqq = QuasiQuoter (\s -> return $ buildF s) undefined undefined undefined
+gertrude = QuasiQuoter liveGertrude undefined undefined undefined
