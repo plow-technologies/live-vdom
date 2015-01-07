@@ -62,7 +62,11 @@ test2 o =  do
                       Jackson
                     <td>
                       941
+|]
 
+test4 a = [gertrude|
+<hello some="test">
+  #{show a}
 |]
 
 

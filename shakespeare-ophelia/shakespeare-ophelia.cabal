@@ -52,7 +52,10 @@ Test-Suite spec
                       , containers
                       , safe
                       , vdom-adapter
-
+                      , pipes-concurrency
+                      , pipes
+                      , template-haskell
+                      , split
 Source-Repository head
   Type:                 git
 --  Location:             

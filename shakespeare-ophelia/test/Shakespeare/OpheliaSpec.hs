@@ -2,21 +2,24 @@
 {-# LANGUAGE QuasiQuotes       #-}
 module Shakespeare.OpheliaSpec  where
 
-import           BasicPrelude
+import           Prelude
 
-import qualified Text.Trifecta.Delta        as D
+import qualified Text.Trifecta.Delta          as D
 import           Text.Trifecta.Parser
 import           Text.Trifecta.Result
 
 import           Test.Hspec
 
+import           Data.List                    (intercalate)
 import           Data.String.Here
-import qualified Data.Text                  as T
-import qualified Data.Tree                  as T
+import qualified Data.Text                    as T
+import qualified Data.Tree                    as T
+
+
 import           Shakespeare.Ophelia.Parser
 import           Shakespeare.Parser
+import           Shakespeare.Parser.Live.VDOM
 import           Shakespeare.Parser.VDOM
-
 
 main :: IO ()
 main = hspec spec
@@ -29,6 +32,7 @@ spec = do
   specConcaveConcatenation
   specMultiLevels
   specParser
+  specLiveNode
 
 specSimpleParse :: Spec
 specSimpleParse = do
@@ -66,7 +70,7 @@ specParse parser input expectedResult = do
   let rParsed = parseString parser (D.Columns 0 0) input
   case rParsed of
     Success parsed -> parsed `shouldBe` expectedResult
-    Failure d -> fail . T.unpack $ show d
+    Failure d -> fail $ show d
 
 specParseForest :: String -> T.Forest String -> Expectation
 specParseForest st t = specParse parseLineForest st (ParsedTree t)

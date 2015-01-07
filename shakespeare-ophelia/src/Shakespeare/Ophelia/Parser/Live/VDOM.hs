@@ -4,7 +4,7 @@
 module Shakespeare.Ophelia.Parser.Live.VDOM where
 
 
-import           Prelude                               hiding (foldl,foldr)
+import           Prelude                               hiding (foldl, foldr)
 
 
 import           Control.Applicative
@@ -17,15 +17,20 @@ import           Text.Parser.Combinators
 import           Text.Parser.LookAhead
 import           Text.Parser.Token
 import           Text.Trifecta.Parser
+import           Text.Trifecta.Result
 
 import           Shakespeare.Ophelia.Parser.Live.Types
 import           Shakespeare.Ophelia.Parser.VDOM
 
 import           Language.Haskell.TH
 
+import           Shakespeare.Ophelia.Parser
+
+parseLiveDom :: (Applicative f, Monad f) => String -> f (Result [PLiveVDom])
+parseLiveDom = parseStringTrees parsePLiveVDom
 
 parsePLiveVDom :: (Monad m) => Parser ([PLiveVDom] -> m PLiveVDom)
-parsePLiveVDom = parseStaticNode <|> parseLiveVNode <|> parseStaticText
+parsePLiveVDom = parseStaticNode <|> parseLiveVNode <|> parseLiveText <|> parseStaticText
 
 
 parseStaticNode :: (Monad m) => Parser ([PLiveVDom] -> m PLiveVDom)
@@ -47,13 +52,21 @@ removeTogether a str = foldr go [] str
 
 parseLiveVNode :: (Monad m) => Parser ([PLiveVDom] -> m PLiveVDom)
 parseLiveVNode = do
-  char '!'
+  _ <- char '!'
   braces $ do
     expr <- manyTill anyChar $ lookAhead $ char '}'
     let failOnNonempty [] = return . PLiveChild . buildF $ (removeTogether ' ' expr)
         failOnNonempty _ = fail "Error. Live nodes are unable to have children"
     return failOnNonempty
 
+parseLiveText :: (Monad m) => Parser ([PLiveVDom] -> m PLiveVDom)
+parseLiveText = do
+  _ <- char '#'
+  braces $ do
+    expr <- manyTill anyChar $ lookAhead $ char '}'
+    let failOnNonempty [] = return . PLiveText . buildF $ (removeTogether ' ' expr)
+        failOnNonempty _ = fail "Error. Live nodes are unable to have children"
+    return failOnNonempty
 
 parseStaticText :: (Monad m) => Parser ([PLiveVDom] -> m PLiveVDom)
 parseStaticText = do

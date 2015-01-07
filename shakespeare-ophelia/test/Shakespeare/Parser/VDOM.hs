@@ -3,7 +3,8 @@
 {-# LANGUAGE QuasiQuotes       #-}
 module Shakespeare.Parser.VDOM where
 
-import           BasicPrelude
+import           Prelude
+
 
 import           Text.Parser.Combinators
 import           Text.Trifecta.Combinators
@@ -50,7 +51,7 @@ explainParse :: (Monad m) => Parser a -> String -> m a
 explainParse parser str = do
   case parseString parser (D.Columns 0 0) str of
     Success res -> return res
-    Failure doc -> fail . T.unpack $ show doc
+    Failure doc -> fail $ show doc
 
 isSuccess :: Result a -> Bool
 isSuccess (Success _) = True
@@ -61,7 +62,7 @@ isFailure = not . isSuccess
 
 explainResult :: (Monad m) => Result a -> m a
 explainResult (Success res) = return res
-explainResult (Failure doc) = fail . T.unpack $ show doc
+explainResult (Failure doc) = fail $ show doc
 
 specSimpleProp = do
   describe "simple property" $ do
