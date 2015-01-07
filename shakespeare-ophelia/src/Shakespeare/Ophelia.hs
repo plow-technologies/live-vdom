@@ -8,8 +8,9 @@ import           Data.List.Split
 import           Language.Haskell.TH
 import           Shakespeare.Ophelia.QQ
 import           Language.Haskell.TH.Quote
+import Pipes.Concurrent
 
-test = [gertrude|<table style="width:100%">
+test1 = [gertrude|<table style="width:100%">
                   <tr>
                     <td>
                       Jill
@@ -18,7 +19,7 @@ test = [gertrude|<table style="width:100%">
                     <td>
                       50
   <tr>
-    <td>\
+    <td>
       Evan
     <td>
       Jackson
@@ -28,7 +29,22 @@ test = [gertrude|<table style="width:100%">
 |]
 
 
-test2 =  do
+test3 = [gertrude|<table style="width:100%">
+                  <tr>
+                    <td>
+                      Jill
+                    <td>
+                      Smith
+                    <td>
+                      50
+|]
+
+pc = spawn $ Latest test1
+
+-- woah :: String
+-- woah = $(stringL "print . show $ 4")
+
+test2 o =  do
   [gertrude|<table style="width:100%">
                   <tr>
                     <td>
@@ -37,7 +53,7 @@ test2 =  do
                       Smith
                     <td>
                       50
-                    !{undefined}
+                    !{o}
                   <tr>
                     <td>
                       Evan
