@@ -2,14 +2,20 @@ module Shakespeare.Ophelia.QQ where
 
 import           Control.Monad.IO.Class
 import           Data.List.Split
+
+
+
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Quote
 import           Language.Haskell.TH.Syntax
+
+
 import           Shakespeare.Ophelia.Parser
 import           Shakespeare.Ophelia.Parser.VDOM
+import           VDOM.Adapter
+
 import           Text.PrettyPrint.ANSI.Leijen
 import           Text.Trifecta.Result
-import           VDOM.Adapter
 
 opheliaExp :: String -> Q Exp
 opheliaExp s = do
@@ -36,9 +42,9 @@ gertrudeExp s = do
 gertrude :: QuasiQuoter
 gertrude = QuasiQuoter gertrudeExp undefined undefined undefined
 
-buildF :: String -> Q Exp
-buildF str = return $ foldl (\e app -> AppE e (VarE $ mkName app)) (VarE . mkName . head $ xs) $ tail xs
+buildF :: String -> Exp
+buildF str = foldl (\e app -> AppE e (VarE $ mkName app)) (VarE . mkName . head $ xs) $ tail xs
   where xs = splitOn " " str
 
 bqq :: QuasiQuoter
-bqq = QuasiQuoter buildF undefined undefined undefined
+bqq = QuasiQuoter (\s -> return $ buildF s) undefined undefined undefined

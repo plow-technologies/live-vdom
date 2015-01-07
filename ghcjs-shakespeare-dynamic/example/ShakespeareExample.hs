@@ -37,7 +37,9 @@ import qualified VDOM.Adapter                    as VDA
 
 
 
-
+-- An example of a VDom producer. 
+-- This could take multiple inputs and yeidl vdom when necessary or
+-- you could use the functor instance on Output in Pipe concurrent
 produceVDom :: Producer LiveDom IO r
 produceVDom = forever $ do
   yield (v1,return ())
@@ -53,13 +55,13 @@ emptyOut = spawn Unbounded
 
 main :: IO ()
 main = do
-  container <- [js| document.createElement('div') |] :: IO DOMNode
-  [js_| document.body.appendChild(`container); |] :: IO ()
+  container <- [js| document.createElement('div') |] :: IO DOMNode         -- Container to run the dom inside of
+  [js_| document.body.appendChild(`container); |] :: IO ()                 -- Add the container
   (out,inp) <- emptyOut
   _ <- forkIO $ do
     runEffect $ produceVDom >-> toOutput out
     performGC
-  let getContainer = [js|document.body.childNodes[1]|]
+  let getContainer = [js|document.body.childNodes[1]|]                     -- Should be a better way to get the container
   forever $ runEffect $ fromInput inp >-> (renderDom getContainer emptyDiv)
 
 

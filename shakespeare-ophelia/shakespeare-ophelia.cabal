@@ -17,6 +17,8 @@ Library
                         Shakespeare.Ophelia.QQ
                         Shakespeare.Ophelia.Parser
                         Shakespeare.Ophelia.Parser.VDOM
+                        Shakespeare.Ophelia.Parser.Live.Types
+                        Shakespeare.Ophelia.Parser.Live.VDOM
   Other-Modules:        Shakespeare.Ophelia.Internal
   Build-Depends:        base >= 4 && < 5
                       , trifecta
@@ -30,6 +32,8 @@ Library
                       , ansi-wl-pprint
                       , transformers
                       , split
+                      , pipes
+                      , pipes-concurrency
 
 
 Test-Suite spec

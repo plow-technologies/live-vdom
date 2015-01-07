@@ -4,7 +4,7 @@
 module Shakespeare.Ophelia.Parser.VDOM where
 
 
-import           Prelude                    hiding (foldl, try)
+import           Prelude                    hiding (foldl)
 
 import           VDOM.Adapter
 
@@ -33,7 +33,7 @@ parseVNodeS = parseStringTrees parseVNodeAdapter
 -- This is how the vnode parser is seperated
 -- because it parsed a vnode and then tries to parse vtext
 parseVNodeAdapter :: (Monad m) => Parser ([VNodeAdapter] -> m VNodeAdapter)
-parseVNodeAdapter = (parseVNode) <|> (parseVText)
+parseVNodeAdapter = parseVNode <|> parseVText
 
 
 -- | Parse a single property and then give a function to add
@@ -41,9 +41,14 @@ parseVNodeAdapter = (parseVNode) <|> (parseVText)
 -- can fail
 parseVNode :: (Monad m) => Parser ([VNodeAdapter] -> m VNodeAdapter)
 parseVNode = angles $ do
-  tagName <- manyTill alphaNum (space <|> (lookAhead $ char '>'))
+  tagName <- parseTagName
   props <- many parseAttribute
   (return $ \children -> return $ VNode tagName props children) <?> "VNode"
+
+
+parseTagName :: Parser String
+parseTagName = manyTill alphaNum (space <|> (lookAhead $ char '>'))
+
 
 -- | Parse a single text element
 -- If any VNode is passed in as a child the parser fails
