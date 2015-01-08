@@ -1,8 +1,8 @@
 module Shakespeare.Ophelia.QQ (
   ophelia
 , gertrude
-, module Shakespeare.Ophelia.Parser.Live.Types
-, module Shakespeare.Ophelia.Parser.Live.VDOM
+, module Shakespeare.Ophelia.Parser.VDOM.Types
+, module Shakespeare.Ophelia.Parser.VDOM.Live
 ) where
 
 import           Language.Haskell.TH
@@ -13,8 +13,8 @@ import           Language.Haskell.TH.Syntax
 import           Shakespeare.Ophelia.Parser
 import           Shakespeare.Ophelia.Parser.VDOM
 
-import           Shakespeare.Ophelia.Parser.Live.Types
-import           Shakespeare.Ophelia.Parser.Live.VDOM
+import           Shakespeare.Ophelia.Parser.VDOM.Types
+import           Shakespeare.Ophelia.Parser.VDOM.Live
 
 
 import           Text.Trifecta.Result
