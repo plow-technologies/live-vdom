@@ -20,7 +20,7 @@ import           Text.Trifecta.Delta
 import           Text.Trifecta.Parser
 import           Text.Trifecta.Result
 
-import           Shakespeare.Ophelia.Parser.Live.Types
+import           Shakespeare.Ophelia.Parser.VDOM.Types
 import           Shakespeare.Ophelia.Parser.VDOM
 
 import           Language.Haskell.TH
