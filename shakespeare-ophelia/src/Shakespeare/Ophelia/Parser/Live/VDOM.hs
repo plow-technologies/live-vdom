@@ -77,7 +77,7 @@ parseLiveText = do
   _ <- char '#'
   braces $ do
     expr <- manyTill anyChar $ lookAhead $ char '}'
-    let failOnNonempty [] = return . PLiveText . buildF $ (removeTogether ' ' expr)
+    let failOnNonempty [] = return . PLiveInterpText . buildF $ (removeTogether ' ' expr)
         failOnNonempty _ = fail "Error. Live nodes are unable to have children"
     return failOnNonempty
 

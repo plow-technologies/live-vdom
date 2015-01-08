@@ -42,8 +42,8 @@ specSimpleLiveNode = do
 specSimpleInterp = do
   describe "simple string interpolation" $ do
     it "should isnert the string in the quasquoted template" $ do
-      x <- atomically . recv $ toProducer  testSimpleInsert
-      y <- atomically . recv $ toProducer  testSimpleInsertRes
+      x <- atomically . recv $ toProducer testSimpleInsert
+      y <- atomically . recv $ toProducer testSimpleInsertRes
       x `shouldBe` y
 
 

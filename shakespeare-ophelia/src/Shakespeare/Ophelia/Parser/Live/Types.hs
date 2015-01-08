@@ -23,7 +23,7 @@ data PLiveVDom =
      PLiveVText {pLiveVirtualText :: String } -- ^ Child text with  no tag name, properties, or children
    | PLiveVNode {pLiveVNodeTagName :: TagName, pLiveVNodePropsList :: [Property], pLiveVNodeChildren :: [PLiveVDom]} -- ^ Basic tree structor for a node with children and properties
    | PLiveChild {pLiveVChild :: Exp}
-   | PLiveText  {pLiveText :: Exp}
+   | PLiveInterpText  {pLiveInterpText :: Exp}
 
 instance Lift PLiveVDom where
   lift (PLiveVText st) = AppE (ConE $ mkName "PLiveVText") <$> (lift st)
@@ -33,7 +33,7 @@ instance Lift PLiveVDom where
     qch <- lift ch
     return $ AppE (AppE (AppE (ConE $ mkName "PLiveVNode") qtn) qpl) qch
   lift (PLiveChild e) = return e
-  lift (PLiveText t) = return t
+  lift (PLiveInterpText t) = return t
 
 -- | Use template haskell to create the live vdom
 toLiveVDomTH :: PLiveVDom -> Q Exp
@@ -44,7 +44,7 @@ toLiveVDomTH (PLiveVNode tn pl ch) = do
   cExp <- sequence $ toLiveVDomTH <$> ch
   return $ AppE (AppE (AppE (ConE $ mkName "LiveVNode") qtn) qpl) (ListE cExp)
 toLiveVDomTH (PLiveChild e) = return $ AppE (ConE  $ mkName "LiveChild") e
-toLiveVDomTH (PLiveText t) = return $ AppE (ConE $ mkName "LiveVText") t
+toLiveVDomTH (PLiveInterpText t) = return $ AppE (ConE $ mkName "LiveVText") t
 
 
 -- | Transform LiveDom to VNode so that it can be processed
