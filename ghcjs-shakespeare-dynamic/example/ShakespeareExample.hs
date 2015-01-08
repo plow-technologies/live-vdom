@@ -39,30 +39,22 @@ import           Shakespeare.Ophelia
 
 
 
--- An example of a VDom producer.
--- This could take multiple inputs and yeidl vdom when necessary or
--- you could use the functor instance on Output in Pipe concurrent
+-- Produce an infinite stream of increasing integers
 produceT :: Producer Integer IO r
-produceT = do
-  tm <- liftIO $ newTVarIO 0
-  forever $ do
-    x' <- liftIO $ atomically $ do
-            t <- readTVar tm
-            writeTVar tm (t+1)
-            return t
-    yield x'
-    liftIO $ threadDelay 1000000
+produceT = go 0 
+  where go n = do
+          yield n
+          liftIO $ threadDelay 1000000
+          go $ n + 1
 
 main :: IO ()
 main = do
-  container <- [js| document.createElement('div') |] :: IO DOMNode         -- Container to run the dom inside of
-  [js_| document.body.appendChild(`container); |] :: IO ()                 -- Add the container
+  container <- createContainer
   (out,inp) <- spawn Unbounded
   _ <- forkIO $ do
     runEffect $ produceT >-> toOutput out
     performGC
-  let getContainer = [js|document.body.childNodes[3]|]                     -- Should be a better way to get the container
-  runDomI getContainer (showTemp <$> inp)
+  runDomI container (showTemp <$> inp)
 
 
 showTemp :: Integer -> LiveVDom

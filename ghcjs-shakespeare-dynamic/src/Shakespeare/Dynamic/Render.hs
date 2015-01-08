@@ -14,6 +14,7 @@ module Shakespeare.Dynamic.Render (
 , renderDom'
 , runDom
 , runDomI
+, createContainer
 ) where
 
 
@@ -39,13 +40,20 @@ import           Shakespeare.Ophelia.Parser.VDOM
 import           Shakespeare.Ophelia.Parser.VDOM.Types
 
 
-runDomI :: IO DOMNode -> Input LiveVDom -> IO ()
-runDomI getContainer prd = runDom getContainer (LiveChild prd)
 
-runDom :: IO DOMNode -> LiveVDom -> IO ()
-runDom getContainer ld = do
+createContainer :: IO DOMNode
+createContainer = do
+  container <- [js| document.createElement('div') |] :: IO DOMNode
+  [js_| document.body.appendChild(`container); |] :: IO ()
+  return container        
+
+runDomI :: DOMNode -> Input LiveVDom -> IO ()
+runDomI container prd = runDom container (LiveChild prd)
+
+runDom :: DOMNode -> LiveVDom -> IO ()
+runDom container ld = do
   t <- newTVarIO emptyDiv
-  forever $ runEffect $ fromInput (toProducer ld) >-> toSingle >-> (renderDomOn getContainer t)
+  forever $ runEffect $ fromInput (toProducer ld) >-> toSingle >-> (renderDomOn container t)
 
 
 toSingle :: Monad m => Pipe [a] a m ()
@@ -56,10 +64,10 @@ toSingle = do
     [] -> fail "Unable to have vdom with no main node"
     _ -> fail "Unable to have vdom with more than one main node"
 
-renderDomOn :: IO DOMNode
+renderDomOn :: DOMNode
             -> TVar VNode
             -> Consumer VDA.VNodeAdapter IO ()
-renderDomOn getContainer tI = do
+renderDomOn container tI = do
   (vna) <- await
   (newNode, oldNode) <- liftIO $ do
     o <- atomically $ readTVar tI
@@ -67,37 +75,34 @@ renderDomOn getContainer tI = do
     return (n, o)
   let pa = diff oldNode newNode
   _ <- liftIO $ do
-    root <- getContainer
-    redraw root pa
+    redraw container pa
     atomically $ writeTVar tI newNode
-  renderDomOn getContainer tI
+  renderDomOn container tI
 -- | Create a pipe to render VDom whenever it's updated
-renderDom :: IO DOMNode                      -- ^ Container ov the vdom
+renderDom :: DOMNode                      -- ^ Container ov the vdom
           -> VNode                           -- ^ Initial VDom
           -> Consumer (VDA.VNodeAdapter) IO () -- ^ Consumer to push VDom to with a finalizer
-renderDom getContainer initial = do
+renderDom container initial = do
   (vna) <- await
   newNode <- liftIO $ toVNode vna
   let pa = diff initial newNode
   _ <- liftIO $ do
-    root <- getContainer
-    redraw root pa
-  renderDom getContainer newNode
+    redraw container pa
+  renderDom container newNode
 
 
 -- | Create a pipe to render VDom whenever it's updated
-renderDom' :: IO DOMNode                      -- ^ Container ov the vdom
+renderDom' :: DOMNode                      -- ^ Container ov the vdom
           -> VNode                           -- ^ Initial VDom
           -> Consumer (VDA.VNodeAdapter, IO ()) IO () -- ^ Consumer to push VDom to with a finalizer
-renderDom' getContainer initial = do
+renderDom' container initial = do
   (vna, f) <- await
   newNode <- liftIO $ toVNode vna
   let pa = diff initial newNode
   _ <- liftIO $ do
-    root <- getContainer
-    redraw root pa
+    redraw container pa
     f
-  renderDom' getContainer newNode
+  renderDom' container newNode
 
 redraw :: DOMNode -> Patch -> IO ()
 redraw node pa = pa `seq` atAnimationFrame (patch node pa)
