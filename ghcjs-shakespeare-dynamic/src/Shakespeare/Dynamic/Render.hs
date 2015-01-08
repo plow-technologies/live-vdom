@@ -15,8 +15,8 @@ module Shakespeare.Dynamic.Render (
 ) where
 
 
-import           Prelude                     hiding (div)
-
+import           Control.Monad
+import           Prelude                               hiding (div)
 
 import           GHCJS.Foreign
 import           GHCJS.Foreign.QQ
@@ -24,24 +24,42 @@ import           GHCJS.VDOM
 
 
 import           Shakespeare.Dynamic.Adapter
-import qualified VDOM.Adapter                as VDA
+import qualified VDOM.Adapter                          as VDA
 
 import           Pipes
+import           Pipes.Concurrent
 
 
-import Shakespeare.Ophelia.Parser.VDOM
+import           Shakespeare.Ophelia.Parser.VDOM
+import           Shakespeare.Ophelia.Parser.VDOM.Types
+
+
+
+
+runDom :: IO DOMNode -> LiveVDom-> IO ()
+runDom getContainer ld = do
+  forever $ runEffect $ fromInput (toProducer ld) >-> toSingle >-> (renderDom getContainer emptyDiv)
+
+
+toSingle :: Monad m => Pipe [a] a m ()
+toSingle = do
+  x <- await
+  case x of
+    x:[] -> yield x
+    [] -> fail "Unable to have vdom with no main node"
+    _ -> fail "Unable to have vdom with more than one main node"
+
 -- | Create a pipe to render VDom whenever it's updated
 renderDom :: IO DOMNode                      -- ^ Container ov the vdom
           -> VNode                           -- ^ Initial VDom
-          -> Consumer (VDA.VNodeAdapter, IO ()) IO () -- ^ Consumer to push VDom to with a finalizer
+          -> Consumer (VDA.VNodeAdapter) IO () -- ^ Consumer to push VDom to with a finalizer
 renderDom getContainer initial = do
-  (vna, finalizer) <- await
+  (vna) <- await
   newNode <- liftIO $ toVNode vna
   let pa = diff initial newNode
   _ <- liftIO $ do
     root <- getContainer
     redraw root pa
-    finalizer
   renderDom getContainer newNode
 
 redraw :: DOMNode -> Patch -> IO ()

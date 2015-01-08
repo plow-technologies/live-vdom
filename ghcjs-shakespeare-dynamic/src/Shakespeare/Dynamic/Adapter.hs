@@ -23,13 +23,6 @@ instance ToJSRef JSProp where
   toJSRef (JSPText t) = castToJSRef t
   toJSRef (JSPBool b) = castToJSRef b
   toJSRef (JSPInt i) = castToJSRef i
-  toJSRef (JSPInt8 i8) = castToJSRef i8
-  toJSRef (JSPInt16 i16) = castToJSRef i16
-  toJSRef (JSPInt32 i32) = castToJSRef i32
-  toJSRef (JSPWord w) = castToJSRef w
-  toJSRef (JSPWord8 w8)  = castToJSRef w8
-  toJSRef (JSPWord16 w16)  = castToJSRef w16
-  toJSRef (JSPWord32 w32) = castToJSRef w32
   toJSRef (JSPFloat f) = castToJSRef f
   toJSRef (JSPDouble d) = castToJSRef d
 
