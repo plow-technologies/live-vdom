@@ -42,6 +42,7 @@ data VNodeAdapter =
 instance Lift VNodeAdapter where
   lift (VText st) = AppE (ConE $ mkVdomName "VText") <$> (lift st)
   lift (VNode tn pList vc) = AppE <$> (AppE <$> (AppE (ConE $ mkVdomName "VNode") <$> (lift tn)) <*> (lift pList)) <*> (lift vc)
+
 -- | The types that are representable in javascript
 -- tag values
 data JSProp = JSPBool Bool

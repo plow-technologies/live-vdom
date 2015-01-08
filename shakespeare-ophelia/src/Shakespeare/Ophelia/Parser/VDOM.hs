@@ -85,8 +85,3 @@ parseJSPDouble = JSPDouble <$> quoted double
 
 quoted :: Parser a -> Parser a
 quoted nParser = try $ (between (char '"') (char '"') nParser)
-
-
-
--- combineVText :: VNodeAdapter -> VNodeAdapter
--- combineVText VNodeAdapter

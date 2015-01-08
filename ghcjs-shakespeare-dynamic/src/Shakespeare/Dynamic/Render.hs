@@ -29,7 +29,7 @@ import qualified VDOM.Adapter                as VDA
 import           Pipes
 
 
-
+import Shakespeare.Ophelia.Parser.VDOM
 -- | Create a pipe to render VDom whenever it's updated
 renderDom :: IO DOMNode                      -- ^ Container ov the vdom
           -> VNode                           -- ^ Initial VDom

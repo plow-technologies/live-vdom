@@ -31,7 +31,7 @@ parseLiveDom :: (Applicative f, Monad f) => String -> f (Result [PLiveVDom])
 parseLiveDom = parseStringTrees parsePLiveVDom
 
 parsePLiveVDom :: (Monad m) => Parser ([PLiveVDom] -> m PLiveVDom)
-parsePLiveVDom = parseStaticNode <|> parseLiveVNode <|> parseLiveText <|> parseStaticText
+parsePLiveVDom = parseStaticNode <|> parseLiveVNode <|> parseMultipleLiveNodes <|> parseLiveText <|> parseStaticText
 
 
 parseStaticNode :: (Monad m) => Parser ([PLiveVDom] -> m PLiveVDom)
@@ -71,6 +71,16 @@ parseLiveVNode = do
     let failOnNonempty [] = return . PLiveChild . buildF $ (removeTogether ' ' expr)
         failOnNonempty _ = fail "Error. Live nodes are unable to have children"
     return failOnNonempty
+
+parseMultipleLiveNodes :: (Monad m) => Parser ([PLiveVDom] -> m PLiveVDom)
+parseMultipleLiveNodes = do
+  _ <- char '&'
+  braces $ do
+    expr <- manyTill anyChar $ lookAhead $ char '}'
+    let failOnNonempty [] = return . PLiveChildren . buildF $ (removeTogether ' ' expr)
+        failOnNonempty _ = fail "Error. Live nodes are unable to have children"
+    return failOnNonempty
+
 
 parseLiveText :: (Monad m) => Parser ([PLiveVDom] -> m PLiveVDom)
 parseLiveText = do

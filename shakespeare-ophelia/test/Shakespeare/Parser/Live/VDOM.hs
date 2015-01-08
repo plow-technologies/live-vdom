@@ -46,13 +46,13 @@ specSimpleInterp = do
       y <- atomically . recv $ toProducer testSimpleInsertRes
       x `shouldBe` y
 
-
+testSimpleLive :: LiveVDom
 testSimpleLive = [gertrude|
 <some other="test">
   <with a="child">
 |]
 
-
+testSimpleLive2 :: Input LiveVDom -> LiveVDom
 testSimpleLive2 inp = [gertrude|
 <some header="value">
   <with children="nodes">
@@ -60,7 +60,7 @@ testSimpleLive2 inp = [gertrude|
   <and some="other values">
 |]
 
-
+testSimpleLive2Res :: LiveVDom
 testSimpleLive2Res = [gertrude|
 <some header="value">
   <with children="nodes">
@@ -69,6 +69,7 @@ testSimpleLive2Res = [gertrude|
   <and some="other values">
 |]
 
+testSimpleInsert :: LiveVDom
 testSimpleInsert = let val = 4 in [gertrude|
 <some header="value">
   <with children="nodes">
@@ -77,7 +78,7 @@ testSimpleInsert = let val = 4 in [gertrude|
   <and some="other values">
 |]
 
-
+testSimpleInsertRes :: LiveVDom
 testSimpleInsertRes = [gertrude|
 <some header="value">
   <with children="nodes">

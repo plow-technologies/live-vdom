@@ -32,7 +32,6 @@ spec = do
   specConcaveConcatenation
   specMultiLevels
   specParser
-  specLiveNode
 
 specSimpleParse :: Spec
 specSimpleParse = do

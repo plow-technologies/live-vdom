@@ -22,6 +22,7 @@ import           Shakespeare.Parser
 
 import           Shakespeare.Ophelia.Parser.VDOM
 import           VDOM.Adapter
+import Shakespeare.Parser.Live.VDOM
 
 
 specParser :: Spec
@@ -32,6 +33,7 @@ specParser = do
   specSimpleVNode
   specBrokenVNodeInVText
   specSimpleNestedVNode
+  specLiveNode
 
 pStringTree :: String -> Maybe (Result [VNodeAdapter])
 pStringTree = parseVNodeS
