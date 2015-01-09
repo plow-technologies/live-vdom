@@ -2,10 +2,10 @@
 module Shakespeare.Ophelia.Parser.VDOM.Types where
 
 import           Control.Applicative
-import           Control.Monad              hiding (sequence)
+import           Control.Monad              hiding (sequence, mapM)
 import           Data.Traversable
 import           Pipes.Concurrent
-import           Prelude                    hiding (sequence)
+import           Prelude                    hiding (sequence, mapM)
 
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Syntax
@@ -51,18 +51,13 @@ toLiveVDomTH (PLiveChildren e) = return $ AppE (ConE  $ mkName "LiveChildren") e
 toLiveVDomTH (PLiveInterpText t) = return $ AppE (ConE $ mkName "LiveVText") t
 
 
-
-testing :: (Traversable t, Monad m) => t (m a) -> m (t a)
-testing = sequence
-
-
 -- | Transform LiveDom to VNode so that it can be processed
 toProducer :: LiveVDom -> Input [VNodeAdapter]
 toProducer (LiveVText t) = return $ [VText t]
 toProducer (LiveVNode tn pl ch) = do
-  ch' <- testing $ toProducer <$> ch
+  ch' <- mapM toProducer ch
   return $ [VNode tn pl (join ch')]
 toProducer (LiveChild ivc) = join $ toProducer <$> ivc
 toProducer (LiveChildren lvc) = do
-  xs <- join $ testing <$> (fmap toProducer) <$> lvc
+  xs <- join $ sequence <$> (fmap toProducer) <$> lvc
   return $ join xs

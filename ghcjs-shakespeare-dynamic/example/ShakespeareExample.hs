@@ -14,7 +14,7 @@ module Main where
 -- Base
 import           Control.Applicative
 import           Control.Concurrent              (threadDelay)
-import           Control.Monad                   (forever)
+import           Control.Monad                   (forever, liftM2)
 import           Data.Maybe
 import           Data.String.Here
 import qualified Data.Text                       as T
@@ -40,21 +40,29 @@ import           Shakespeare.Ophelia
 
 
 -- Produce an infinite stream of increasing integers
-produceT :: Producer Integer IO r
-produceT = go 0 
+produceT :: Int -> Producer Integer IO r
+produceT wait = go 0 
   where go n = do
           yield n
-          liftIO $ threadDelay 1000000
+          liftIO $ threadDelay wait
           go $ n + 1
 
 main :: IO ()
 main = do
   container <- createContainer
-  (out,inp) <- spawn Unbounded
+  (out,inp) <- spawn $ Unbounded
+  (out2,inp2) <- spawn $ Unbounded
   _ <- forkIO $ do
-    runEffect $ produceT >-> toOutput out
-    performGC
-  runDomI container (showTemp <$> inp)
+    runEffect $ produceT 1000000 >-> toOutput out
+  _ <- forkIO $ do
+    runEffect $ produceT 10000000 >-> toOutput out2
+  forever $ runEffect $ (fromInput $ (\a b -> (a,b)) <$> inp2 <*> inp) >-> printC
+  where printC :: Consumer (Integer, Integer) IO ()
+        printC =  do
+          x <- await
+          liftIO $ print x
+
+  -- runDomI container (liftM2 showTemp inp2 inp)
 
 
 showTemp :: Integer -> LiveVDom

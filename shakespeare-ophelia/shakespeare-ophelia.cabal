@@ -34,6 +34,7 @@ Library
                       , split
                       , pipes
                       , pipes-concurrency
+                      , stm-notify
 
 
 Test-Suite spec
