@@ -39,6 +39,7 @@ Library
                       , pipes
                       , pipes-concurrency
                       , stm
+                      , stm-notify
 
 
 executable example
@@ -63,6 +64,8 @@ executable example
                 , pipes-concurrency
                 , transformers
                 , stm
+                , stm-notify
+
   ghcjs-Options:    -O -Wall
 
 Test-Suite spec
