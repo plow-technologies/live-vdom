@@ -4,7 +4,8 @@ module Shakespeare.Ophelia.Parser.VDOM.Types where
 import           Control.Applicative
 import           Control.Monad              hiding (sequence, mapM)
 import           Data.Traversable
-import           Pipes.Concurrent
+-- import           Pipes.Concurrent -- Not used because of stm-notify
+import           Control.Concurrent.STM.Notify
 import           Prelude                    hiding (sequence, mapM)
 
 import           Language.Haskell.TH
@@ -15,8 +16,8 @@ import           VDOM.Adapter
 data LiveVDom =
      LiveVText {liveVirtualText :: String } -- ^ Child text with  no tag name, properties, or children
    | LiveVNode {liveVNodeTagName :: TagName, liveVNodePropsList :: [Property], liveVNodeChildren :: [LiveVDom]} -- ^ Basic tree structor for a node with children and properties
-   | LiveChild {liveVChild :: Input LiveVDom} -- ^ Mutable dom
-   | LiveChildren {liveVChildren :: Input [LiveVDom]}
+   | LiveChild {liveVChild :: STMEnvelope LiveVDom} -- ^ Mutable dom
+   | LiveChildren {liveVChildren :: STMEnvelope [LiveVDom]}
 
 
 
@@ -52,7 +53,7 @@ toLiveVDomTH (PLiveInterpText t) = return $ AppE (ConE $ mkName "LiveVText") t
 
 
 -- | Transform LiveDom to VNode so that it can be processed
-toProducer :: LiveVDom -> Input [VNodeAdapter]
+toProducer :: LiveVDom -> STMEnvelope [VNodeAdapter]
 toProducer (LiveVText t) = return $ [VText t]
 toProducer (LiveVNode tn pl ch) = do
   ch' <- mapM toProducer ch
