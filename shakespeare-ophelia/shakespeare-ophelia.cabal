@@ -18,6 +18,7 @@ Library
                         Shakespeare.Ophelia.Parser
                         Shakespeare.Ophelia.Parser.VDOM
                         Shakespeare.Ophelia.Parser.VDOM.Types
+                        Shakespeare.Ophelia.Parser.VDOM.Event
                         Shakespeare.Ophelia.Parser.VDOM.Live
   Other-Modules:        Shakespeare.Ophelia.Internal
   Build-Depends:        base >= 4 && < 5
