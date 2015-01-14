@@ -16,8 +16,8 @@ import           VDOM.Adapter
 data LiveVDom =
      LiveVText {liveVirtualText :: String } -- ^ Child text with  no tag name, properties, or children
    | LiveVNode {liveVNodeTagName :: TagName, liveVNodePropsList :: [Property], liveVNodeChildren :: [LiveVDom]} -- ^ Basic tree structor for a node with children and properties
-   | LiveChild {liveVChild :: STMEnvelope LiveVDom} -- ^ Mutable dom
-   | LiveChildren {liveVChildren :: STMEnvelope [LiveVDom]}
+   | LiveChild {liveVChild :: STMEnvelope LiveVDom} -- ^ DOM that can change
+   | LiveChildren {liveVChildren :: STMEnvelope [LiveVDom]} -- ^ A child that can change
 
 
 
@@ -62,3 +62,11 @@ toProducer (LiveChild ivc) = join $ toProducer <$> ivc
 toProducer (LiveChildren lvc) = do
   xs <- join $ sequence <$> (fmap toProducer) <$> lvc
   return $ join xs
+
+
+
+-- | Add a list of property to LiveVNode if it is a liveVNode
+  -- If it isn't it leaves the rest alone
+addProps :: LiveVDom -> [Property] -> LiveVDom
+addProps (LiveVNode tn pl ch) pl' = LiveVNode tn (pl ++ pl') ch
+addProps l _ = l
