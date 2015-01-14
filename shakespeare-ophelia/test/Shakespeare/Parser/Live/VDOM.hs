@@ -24,8 +24,7 @@ import           Shakespeare.Ophelia.Parser.VDOM
 import           Shakespeare.Ophelia.QQ
 import           VDOM.Adapter
 
-import           Pipes.Concurrent
-
+import           Control.Concurrent.STM.Notify
 
 
 specLiveNode = do
@@ -35,15 +34,15 @@ specLiveNode = do
 specSimpleLiveNode = do
   describe "simple live node" $ do
     it "compose the child nodes correctly" $ do
-      x <- atomically . recv . toProducer $ testSimpleLive2 (return testSimpleLive)
-      y <- atomically . recv $ toProducer testSimpleLive2Res 
+      x <- recvIO . toProducer $ testSimpleLive2 (return testSimpleLive)
+      y <- recvIO $ toProducer testSimpleLive2Res
       x `shouldBe` y
 
 specSimpleInterp = do
   describe "simple string interpolation" $ do
     it "should isnert the string in the quasquoted template" $ do
-      x <- atomically . recv $ toProducer testSimpleInsert
-      y <- atomically . recv $ toProducer testSimpleInsertRes
+      x <- recvIO $ toProducer testSimpleInsert
+      y <- recvIO $ toProducer testSimpleInsertRes
       x `shouldBe` y
 
 testSimpleLive :: LiveVDom
@@ -52,11 +51,11 @@ testSimpleLive = [gertrude|
   <with a="child">
 |]
 
-testSimpleLive2 :: Input LiveVDom -> LiveVDom
+testSimpleLive2 :: STMEnvelope LiveVDom -> LiveVDom
 testSimpleLive2 inp = [gertrude|
 <some header="value">
   <with children="nodes">
-    !{id inp}
+    !{id . id . id $ inp}
   <and some="other values">
 |]
 

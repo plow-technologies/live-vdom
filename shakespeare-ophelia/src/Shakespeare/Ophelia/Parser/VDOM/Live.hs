@@ -20,17 +20,19 @@ import           Text.Trifecta.Delta
 import           Text.Trifecta.Parser
 import           Text.Trifecta.Result
 
-import           Shakespeare.Ophelia.Parser.VDOM.Types
 import           Shakespeare.Ophelia.Parser.VDOM
+import           Shakespeare.Ophelia.Parser.VDOM.Types
 
 import           Language.Haskell.TH
 
 import           Shakespeare.Ophelia.Parser
 
+import           Language.Haskell.Meta.Parse
+
 parseLiveDom :: (Applicative f, Monad f) => String -> f (Result [PLiveVDom])
 parseLiveDom = parseStringTrees parsePLiveVDom
 
-parsePLiveVDom :: (Monad m) => Parser ([PLiveVDom] -> m PLiveVDom)
+parsePLiveVDom :: (Monad m, Functor m) => Parser ([PLiveVDom] -> m PLiveVDom)
 parsePLiveVDom = parseStaticNode <|> parseLiveVNode <|> parseMultipleLiveNodes <|> parseLiveText <|> parseStaticText
 
 
@@ -40,9 +42,14 @@ parseStaticNode = angles $ do
   props <- many parseAttribute
   (return $ \children -> return $ PLiveVNode tagName props children) <?> "LiveVNode"
 
-buildF :: String -> Exp
-buildF str = foldl (\e app -> AppE e (parseLitExpr app)) (parseLitExpr . head $ xs) $ tail xs
-  where xs = splitOn " " str
+-- buildF :: String -> Exp
+-- buildF str = foldl (\e app -> AppE e (parseLitExpr app)) (parseLitExpr . head $ xs) $ tail xs
+--   where xs = splitOn " " str
+
+buildF :: (Monad m, Functor m) => String -> m Exp
+buildF str = case parseExp str of
+              (Left str) -> fail str
+              (Right e) -> return e
 
 parseLitExpr :: String -> Exp
 parseLitExpr str = fromResult (VarE $ mkName str) $ LitE <$> parseString parseHLit (Columns 0 0) str
@@ -63,31 +70,31 @@ removeTogether a str = foldr go [] str
                         then x:xs
                         else y:x:xs
 
-parseLiveVNode :: (Monad m) => Parser ([PLiveVDom] -> m PLiveVDom)
+parseLiveVNode :: (Monad m, Functor m) => Parser ([PLiveVDom] -> m PLiveVDom)
 parseLiveVNode = do
   _ <- char '!'
   braces $ do
     expr <- manyTill anyChar $ lookAhead $ char '}'
-    let failOnNonempty [] = return . PLiveChild . buildF $ (removeTogether ' ' expr)
+    let failOnNonempty [] = PLiveChild <$> buildF expr
         failOnNonempty _ = fail "Error. Live nodes are unable to have children"
     return failOnNonempty
 
-parseMultipleLiveNodes :: (Monad m) => Parser ([PLiveVDom] -> m PLiveVDom)
+parseMultipleLiveNodes :: (Monad m, Functor m) => Parser ([PLiveVDom] -> m PLiveVDom)
 parseMultipleLiveNodes = do
   _ <- char '&'
   braces $ do
     expr <- manyTill anyChar $ lookAhead $ char '}'
-    let failOnNonempty [] = return . PLiveChildren . buildF $ (removeTogether ' ' expr)
+    let failOnNonempty [] = PLiveChildren <$> buildF expr
         failOnNonempty _ = fail "Error. Live nodes are unable to have children"
     return failOnNonempty
 
 
-parseLiveText :: (Monad m) => Parser ([PLiveVDom] -> m PLiveVDom)
+parseLiveText :: (Monad m, Functor m) => Parser ([PLiveVDom] -> m PLiveVDom)
 parseLiveText = do
   _ <- char '#'
   braces $ do
     expr <- manyTill anyChar $ lookAhead $ char '}'
-    let failOnNonempty [] = return . PLiveInterpText . buildF $ (removeTogether ' ' expr)
+    let failOnNonempty [] = PLiveInterpText <$> buildF expr
         failOnNonempty _ = fail "Error. Live nodes are unable to have children"
     return failOnNonempty
 
