@@ -1,21 +1,19 @@
+{-# LANGUAGE DeriveFunctor #-}
 module Shakespeare.Ophelia.Parser.VDOM.Event where
 
-import Control.Monad
-import Control.Applicative
+import           Control.Applicative
+import           Control.Monad
 
-import Data.Traversable
-import Data.Foldable
-import Data.Monoid
+import           Data.Foldable
+import           Data.Monoid
+import           Data.Traversable
 
 -- | An event type that allows for a base event type
 -- so that you have a base state for all applications that take an event
 data Event a = Unfired  -- ^ The state of an eveent that has never been used
              | Fired a  -- ^ The value of an event.
-  deriving (Show, Read, Eq, Ord)
+  deriving (Show, Read, Eq, Ord, Functor)
 
-instance Functor Event where
-  fmap f (Fired a) = Fired $ f a
-  fmap _ Unfired = Unfired
 
 instance Applicative Event where
   pure a = Fired a

@@ -1,4 +1,5 @@
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Shakespeare.Ophelia.Parser.VDOM.Types where
 
 import           Control.Applicative
@@ -29,27 +30,27 @@ data PLiveVDom =
    | PLiveInterpText  {pLiveInterpText :: Exp} -- ^ Interpolated text that will get transformed into LiveVText
 
 instance Lift PLiveVDom where
-  lift (PLiveVText st) = AppE (ConE $ mkName "PLiveVText") <$> (lift st)
+  lift (PLiveVText st) = AppE (ConE 'PLiveVText) <$> (lift st)
   lift (PLiveVNode tn pl ch) = do
     qtn <- lift tn
     qpl <- lift pl
     qch <- lift ch
-    return $ AppE (AppE (AppE (ConE $ mkName "PLiveVNode") qtn) qpl) qch
+    return $ AppE (AppE (AppE (ConE 'PLiveVNode) qtn) qpl) qch
   lift (PLiveChild e) = return e
   lift (PLiveChildren e) = return e
   lift (PLiveInterpText t) = return t
 
 -- | Use template haskell to create the live vdom
 toLiveVDomTH :: PLiveVDom -> Q Exp
-toLiveVDomTH (PLiveVText st) = AppE (ConE $ mkName "LiveVText") <$> (lift st)
+toLiveVDomTH (PLiveVText st) = AppE (ConE 'LiveVText) <$> (lift st)
 toLiveVDomTH (PLiveVNode tn pl ch) = do
   qtn <- lift tn
   qpl <- lift pl
   cExp <- sequence $ toLiveVDomTH <$> ch
-  return $ AppE (AppE (AppE (ConE $ mkName "LiveVNode") qtn) qpl) (ListE cExp)
-toLiveVDomTH (PLiveChild e) = return $ AppE (ConE  $ mkName "LiveChild") e
-toLiveVDomTH (PLiveChildren e) = return $ AppE (ConE  $ mkName "LiveChildren") e
-toLiveVDomTH (PLiveInterpText t) = return $ AppE (ConE $ mkName "LiveVText") t
+  return $ AppE (AppE (AppE (ConE 'LiveVNode) qtn) qpl) (ListE cExp)
+toLiveVDomTH (PLiveChild e) = return $ AppE (ConE  'LiveChild) e
+toLiveVDomTH (PLiveChildren e) = return $ AppE (ConE  'LiveChildren) e
+toLiveVDomTH (PLiveInterpText t) = return $ AppE (ConE 'LiveVText) t
 
 
 -- | Transform LiveDom to VNode so that it can be processed
