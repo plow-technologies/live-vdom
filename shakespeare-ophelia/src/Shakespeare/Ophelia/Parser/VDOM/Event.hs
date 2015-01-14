@@ -46,3 +46,10 @@ instance Foldable Event where
 instance Traversable Event where
   traverse f (Fired e) = Fired <$> f e
   traverse _ Unfired = pure $ Unfired
+
+instance (Monoid m) => Monoid (Event m) where
+  mempty = Unfired
+  mappend (Fired e1) (Fired e2) = Fired $ e1 <> e2
+  mappend Unfired (Fired e) = Fired e
+  mappend (Fired e) Unfired = Fired e
+  mappend Unfired Unfired = Unfired
