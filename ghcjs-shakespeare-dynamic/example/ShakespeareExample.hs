@@ -47,8 +47,8 @@ main = do
   container <- createContainer
   mb1@(env1,addr1) <- spawnIO 0
   mb2@(env2,addr2) <- spawnIO 0
-  _ <- forkIO $ forever (modify mb1 >> threadDelay 10000)
-  _ <- forkIO $ forever (modify mb2 >> threadDelay 1000000)
+  _ <- forkIO $ forever (modify mb1 >> threadDelay 1000)
+  _ <- forkIO $ forever (modify mb2 >> threadDelay 10000000)
   runDomI container (showTemp <$> env1 <*> env2)
 
 

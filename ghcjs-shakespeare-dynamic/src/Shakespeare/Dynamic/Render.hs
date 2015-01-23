@@ -128,7 +128,7 @@ redraw node pa = pa `seq` atAnimationFrame (patch node pa)
 
 atAnimationFrame :: IO () -> IO ()
 atAnimationFrame m = do
-  cb <- syncCallback AlwaysRetain False m
+  cb <- syncCallback NeverRetain False m
   [js_| window.requestAnimationFrame(`cb); |]
 
 

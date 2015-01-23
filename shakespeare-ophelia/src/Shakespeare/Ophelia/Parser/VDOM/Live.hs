@@ -9,7 +9,6 @@ import           Prelude                               hiding (foldl, foldr)
 
 import           Control.Applicative
 import           Data.Foldable
-import           Data.List.Split
 import           Data.String.Here
 
 import           Text.Parser.Char
@@ -42,14 +41,10 @@ parseStaticNode = angles $ do
   props <- many parseAttribute
   (return $ \children -> return $ PLiveVNode tagName props children) <?> "LiveVNode"
 
--- buildF :: String -> Exp
--- buildF str = foldl (\e app -> AppE e (parseLitExpr app)) (parseLitExpr . head $ xs) $ tail xs
---   where xs = splitOn " " str
-
 buildF :: (Monad m, Functor m) => String -> m Exp
 buildF str = case parseExp str of
-              (Left str) -> fail str
-              (Right e) -> return e
+               (Left e) -> fail e
+               (Right e) -> return e
 
 parseLitExpr :: String -> Exp
 parseLitExpr str = fromResult (VarE $ mkName str) $ LitE <$> parseString parseHLit (Columns 0 0) str
