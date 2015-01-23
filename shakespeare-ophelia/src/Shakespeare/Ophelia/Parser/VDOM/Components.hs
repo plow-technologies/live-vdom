@@ -14,8 +14,12 @@ import           VDOM.Adapter
 import           Control.Monad
 
 button :: Address (Event ()) -> String -> LiveVDom JSEvent
-button addr text = addEvent (JSClick $ putStrLn "Testing!") [gertrude|
+button addr text = addEvent (JSClick . void $ sendIO addr $ Fired () ) [gertrude|
   <button type="button">
     #{text}
 |]
 
+textBox :: Address (Event String) -> (Maybe String) -> LiveVDom JSEvent
+textBox addr Nothing = addEvent (JSInput $ \str -> putStrLn str) [gertrude|
+  <input type="text">
+|]

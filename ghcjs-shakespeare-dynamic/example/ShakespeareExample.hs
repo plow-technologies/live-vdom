@@ -74,5 +74,5 @@ showTemp i j = [gertrude|
   <div>
     #{show j}
   <div>
-    !{return $ button undefined "hello"}
+    !{return $ textBox undefined Nothing}
 |]

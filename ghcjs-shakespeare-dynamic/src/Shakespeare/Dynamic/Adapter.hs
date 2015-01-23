@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# LANGUAGE  QuasiQuotes #-}
 module Shakespeare.Dynamic.Adapter where
 
 import           Control.Applicative
