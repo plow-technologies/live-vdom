@@ -56,13 +56,21 @@ instance ToJSRef PropList where
 
 
 -- | Convert a VNodeAdapter to a VNode in order to diff it with vdom
+-- and add the event hooks
 toVNode :: VNodeAdapter -> IO VD.VNode
-toVNode (VNode aTagName aProps aChildren) = do
-  props <- VD.toProperties . castRef <$> (toJSRef $ PropList aProps)
+toVNode (VNode events aTagName aProps aChildren) = do
+  props <- (addEvents events) =<< VD.toProperties . castRef <$> (toJSRef $ PropList aProps)
   children <- TR.mapM toVNode aChildren
   return $ VD.js_vnode tagName props $ mChildren children
   where tagName = toJSString aTagName
         mChildren [] = VD.noChildren
         mChildren xs = VD.mkChildren xs
-toVNode (VText inner) = return $ VD.text $ toJSString inner
+toVNode (VText ev inner) = return $ VD.text $ toJSString inner
 
+
+addEvents :: [JSEvent] -> VD.Properties -> IO VD.Properties
+addEvents events props = foldM addEvent props events
+  where addEvent pl (JSInput f)  = VD.keypress f pl
+        addEvent pl (JSClick f) = (\cb -> VD.click cb pl) <$> (mkCallback f)
+        addEvent pl (JSDoubleClick f) = (\cb -> VD.dblclick cb pl) <$> (mkCallback f)
+        mkCallback = syncCallback NeverRetain False

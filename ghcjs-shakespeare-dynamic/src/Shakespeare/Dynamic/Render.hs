@@ -41,14 +41,14 @@ import           Shakespeare.Ophelia.Parser.VDOM
 import           Shakespeare.Ophelia.Parser.VDOM.Types
 
 
-runDomI :: DOMNode -> STMEnvelope LiveVDom -> IO ()
+runDomI :: DOMNode -> STMEnvelope (LiveVDom VDA.JSEvent) -> IO ()
 runDomI container envLD = foldOnChange  envLD (renderDom container) emptyDiv
 
 
-runDom :: DOMNode -> LiveVDom -> IO ()
+runDom :: DOMNode -> (LiveVDom VDA.JSEvent) -> IO ()
 runDom c e = runDomI c $ return e 
 
-renderDom :: DOMNode -> VNode -> LiveVDom -> IO VNode
+renderDom :: DOMNode -> VNode -> (LiveVDom VDA.JSEvent) -> IO VNode
 renderDom container old ld = do
   let vna = toProducer ld
   vnaL <- recvIO vna
@@ -66,10 +66,10 @@ createContainer = do
   [js_| document.body.appendChild(`container); |] :: IO ()
   return container        
 
--- runDomI :: DOMNode -> Input LiveVDom -> IO ()
+-- runDomI :: DOMNode -> Input (LiveVDom VDA.JSEvent) -> IO ()
 -- runDomI container prd = runDom container (LiveChild prd)
 
--- runDom :: DOMNode -> LiveVDom -> IO ()
+-- runDom :: DOMNode -> (LiveVDom VDA.JSEvent) -> IO ()
 -- runDom container ld = do
 --   t <- newTVarIO emptyDiv
 --   forever $ runEffect $ fromInput (toProducer ld) >-> toSingle >-> (renderDomOn container t)

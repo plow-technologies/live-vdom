@@ -10,6 +10,7 @@ import           Data.Text
 import           Data.Typeable
 
 import           Language.Haskell.TH.Syntax
+import Instances.TH.Lift
 
 -- | A javascript property like 'input=value'
 -- or even 'ng-click="function()"'
@@ -19,8 +20,8 @@ data Property = Property {
 } deriving (Show, Eq)
 
 
--- instance Lift Property where
---   lift (Property pName pVal) = AppE <$> (AppE (ConE 'Property) <$> (lift pName)) <*> (lift pVal)
+instance Lift Property where
+  lift (Property pName pVal) = AppE <$> (AppE (ConE 'Property) <$> (lift pName)) <*> (lift pVal)
 
 propName :: Name
 propName = mkVdomName "Property"
@@ -29,7 +30,7 @@ type TagName = String
 
 data JSEvent = JSInput (String -> IO ())
              | JSClick (IO ())
-             | JSDoublClick (IO ())
+             | JSDoubleClick (IO ())
 
 
 -- | Intermediary type between ghcjs and haskell
@@ -50,12 +51,12 @@ data JSProp = JSPBool Bool
             | JSPDouble Double
     deriving (Show, Eq)
 
--- instance Lift JSProp where
---   lift (JSPBool b) = AppE (ConE jsBoolName) <$> lift b
---   lift (JSPText t) = AppE (ConE jsTextName) <$> lift t
---   lift (JSPInt i) = AppE (ConE jsIntName) <$> lift i
---   lift (JSPFloat f) = AppE (ConE jsFloatName) <$> lift f
---   lift (JSPDouble d) = AppE(ConE jsDoubleName) <$> lift d
+instance Lift JSProp where
+  lift (JSPBool b) = AppE (ConE jsBoolName) <$> lift b
+  lift (JSPText t) = AppE (ConE jsTextName) <$> lift t
+  lift (JSPInt i) = AppE (ConE jsIntName) <$> lift i
+  lift (JSPFloat f) = AppE (ConE jsFloatName) <$> lift f
+  lift (JSPDouble d) = AppE(ConE jsDoubleName) <$> lift d
 
 jsBoolName, jsTextName, jsIntName, jsFloatName, jsDoubleName :: Name
 jsBoolName = mkVdomName "JSPBool"

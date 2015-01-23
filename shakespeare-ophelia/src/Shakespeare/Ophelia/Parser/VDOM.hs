@@ -43,7 +43,7 @@ parseVNode :: (Monad m) => Parser ([VNodeAdapter] -> m VNodeAdapter)
 parseVNode = angles $ do
   tagName <- parseTagName
   props <- many parseAttribute
-  (return $ \children -> return $ VNode tagName props children) <?> "VNode"
+  (return $ \children -> return $ VNode [] tagName props children) <?> "VNode"
 
 
 parseTagName :: Parser String
@@ -55,9 +55,9 @@ parseTagName = manyTill alphaNum (space <|> (lookAhead $ char '>'))
 parseVText :: (Monad m) => Parser ([VNodeAdapter] -> m VNodeAdapter)
 parseVText = do
   xs <- many anyChar
-  (return $ \vns -> F.foldlM addVText (VText xs) vns) <?> "VText"
-  where addVText (VText accum) (VText new) = return $ VText $ accum ++ "\n" ++ new
-        addVText _ vn@(VNode _ _ _) = fail [i| Unable to add node ${show vn} to text as a node|]
+  (return $ \vns -> F.foldlM addVText (VText [] xs) vns) <?> "VText"
+  where addVText (VText _ accum) (VText _ new) = return $ VText [] $ accum ++ "\n" ++ new
+        addVText _ (VNode _ev tn props _ch) = fail [i| Unable to add node ${show tn ++ " " ++ show props} to text as a node|]
         addVText _ _ = fail [i|Error, somehow parsed VNode instead of VText. Please report this as a bug|]
 
 -- | Consumes leading spaces, the name of the property

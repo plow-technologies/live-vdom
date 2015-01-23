@@ -1,6 +1,5 @@
 module Shakespeare.Ophelia.QQ (
-  ophelia
-, gertrude
+  gertrude
 , module Shakespeare.Ophelia.Parser.VDOM.Types
 , module Shakespeare.Ophelia.Parser.VDOM.Live
 ) where
@@ -19,15 +18,15 @@ import           Shakespeare.Ophelia.Parser.VDOM.Live
 
 import           Text.Trifecta.Result
 
-opheliaExp :: String -> Q Exp
-opheliaExp s = do
-  rN <- parseVNodeS s
-  case rN of
-    Success vn -> lift vn
-    Failure fString -> fail $ show fString
+-- opheliaExp :: String -> Q Exp
+-- opheliaExp s = do
+--   rN <- parseVNodeS s
+--   case rN of
+--     Success vn -> lift vn
+--     Failure fString -> fail $ show fString
 
-ophelia :: QuasiQuoter
-ophelia = QuasiQuoter opheliaExp undefined undefined undefined
+-- ophelia :: QuasiQuoter
+-- ophelia = QuasiQuoter opheliaExp undefined undefined undefined
 
 liveGertrude :: String -> Q Exp
 liveGertrude s = do

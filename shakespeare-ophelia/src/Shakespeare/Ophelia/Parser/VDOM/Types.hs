@@ -42,26 +42,28 @@ instance Lift PLiveVDom where
 
 -- | Use template haskell to create the live vdom
 toLiveVDomTH :: PLiveVDom -> Q Exp
-toLiveVDomTH (PLiveVText st) = AppE (ConE 'LiveVText) <$> (lift st)
+toLiveVDomTH (PLiveVText st) = do
+  iStr <- lift st
+  return $ AppE (AppE (ConE 'LiveVText) (ListE [])) iStr
 toLiveVDomTH (PLiveVNode tn pl ch) = do
   qtn <- lift tn
   qpl <- lift pl
   cExp <- sequence $ toLiveVDomTH <$> ch
-  return $ AppE (AppE (AppE (ConE 'LiveVNode) qtn) qpl) (ListE cExp)
-toLiveVDomTH (PLiveChild e) = return $ AppE (ConE  'LiveChild) e
-toLiveVDomTH (PLiveChildren e) = return $ AppE (ConE  'LiveChildren) e
-toLiveVDomTH (PLiveInterpText t) = return $ AppE (ConE 'LiveVText) t
+  return $ AppE (AppE (AppE (AppE (ConE 'LiveVNode) (ListE [])) qtn) qpl) (ListE cExp)
+toLiveVDomTH (PLiveChild e) = return $ AppE (AppE (ConE  'LiveChild) (ListE [])) e
+toLiveVDomTH (PLiveChildren e) = return $ AppE (AppE (ConE  'LiveChildren) (ListE [])) e
+toLiveVDomTH (PLiveInterpText t) = return $ AppE (AppE (ConE 'LiveVText) (ListE [])) t
 
 
 -- | Transform LiveDom to VNode so that it can be processed
-toProducer :: LiveVDom a -> STMEnvelope [VNodeAdapter]
+toProducer :: LiveVDom JSEvent -> STMEnvelope [VNodeAdapter]
 toProducer (LiveVText ev t) = return $ [VText ev t]
 toProducer (LiveVNode ev tn pl ch) = do
   ch' <- mapM toProducer ch
   return $ [VNode ev tn pl (join ch')]
-toProducer (LiveChild ev ivc) = join $ toProducer <$> ivc
+toProducer (LiveChild ev ivc) = join $ toProducer <$> (addEvents ev <$> ivc)
 toProducer (LiveChildren ev lvc) = do
-  xs <- join $ sequence <$> (fmap toProducer) <$> lvc
+  xs <- join $ sequence <$> (fmap (toProducer . addEvents ev)) <$> lvc
   return $ join xs
 
 
@@ -71,6 +73,11 @@ addEvent ev (LiveVNode evs tn pls ch) = LiveVNode (evs ++ [ev]) tn pls ch -- ^ B
 addEvent ev (LiveChild evs vch) = LiveChild (evs ++ [ev]) vch -- ^ DOM that can change
 addEvent ev (LiveChildren evs vchs) = LiveChildren (evs ++ [ev]) vchs -- ^ A child that can change
 
+addEvents :: [a] -> LiveVDom a -> LiveVDom a
+addEvents ev (LiveVText evs ch) = LiveVText (evs ++ ev) ch -- ^ Child text with  no tag name, properties, or children
+addEvents ev (LiveVNode evs tn pls ch) = LiveVNode (evs ++ ev) tn pls ch -- ^ Basic tree structor for a node with children and properties
+addEvents ev (LiveChild evs vch) = LiveChild (evs ++ ev) vch -- ^ DOM that can change
+addEvents ev (LiveChildren evs vchs) = LiveChildren (evs ++ ev) vchs -- ^ A chi
 
 -- | Add a list of property to LiveVNode if it is a liveVNode
   -- If it isn't it leaves the rest alone

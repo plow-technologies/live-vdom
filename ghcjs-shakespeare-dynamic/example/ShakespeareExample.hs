@@ -41,13 +41,13 @@ import           Control.Concurrent.STM.TVar
 import           Control.Monad.STM
 import           Shakespeare.Ophelia
 
-
+import Shakespeare.Ophelia.Parser.VDOM.Components
 main :: IO ()
 main = do
   container <- createContainer
   mb1@(env1,addr1) <- spawnIO 0
   mb2@(env2,addr2) <- spawnIO 0
-  _ <- forkIO $ forever (modify mb1 >> threadDelay 1000)
+  _ <- forkIO $ forever (modify mb1 >> threadDelay 10000)
   _ <- forkIO $ forever (modify mb2 >> threadDelay 10000000)
   runDomI container (showTemp <$> env1 <*> env2)
 
@@ -65,7 +65,7 @@ modify (env, addr) = do
 
 
 
-showTemp :: Int -> Int -> LiveVDom
+showTemp :: Int -> Int -> LiveVDom VDA.JSEvent
 showTemp i j = [gertrude|
 <div>
   Will the value update?
@@ -73,4 +73,6 @@ showTemp i j = [gertrude|
     #{show i}
   <div>
     #{show j}
+  <div>
+    !{return $ button undefined "hello"}
 |]
