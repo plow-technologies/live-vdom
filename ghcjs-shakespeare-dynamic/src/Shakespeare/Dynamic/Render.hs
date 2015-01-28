@@ -66,15 +66,6 @@ createContainer = do
   [js_| document.body.appendChild(`container); |] :: IO ()
   return container        
 
--- runDomI :: DOMNode -> Input (LiveVDom VDA.JSEvent) -> IO ()
--- runDomI container prd = runDom container (LiveChild prd)
-
--- runDom :: DOMNode -> (LiveVDom VDA.JSEvent) -> IO ()
--- runDom container ld = do
---   t <- newTVarIO emptyDiv
---   forever $ runEffect $ fromInput (toProducer ld) >-> toSingle >-> (renderDomOn container t)
-
-
 toSingle :: Monad m => Pipe [a] a m ()
 toSingle = do
   x <- await
@@ -82,32 +73,6 @@ toSingle = do
     n:[] -> yield n
     [] -> fail "Unable to have vdom with no main node"
     _ -> fail "Unable to have vdom with more than one main node"
-
--- renderDomOn :: DOMNode
---             -> TVar VNode
---             -> Consumer VDA.VNodeAdapter IO ()
--- renderDomOn container tI = do
---   (vna) <- await
---   (newNode, oldNode) <- liftIO $ do
---     o <- atomically $ readTVar tI
---     n <- toVNode vna
---     return (n, o)
---   let pa = diff oldNode newNode
---   _ <- liftIO $ do
---     redraw container pa
---     atomically $ writeTVar tI newNode
---   renderDomOn container tI
--- | Create a pipe to render VDom whenever it's updated
--- renderDom :: DOMNode                      -- ^ Container ov the vdom
---           -> VNode                           -- ^ Initial VDom
---           -> Consumer (VDA.VNodeAdapter) IO () -- ^ Consumer to push VDom to with a finalizer
--- renderDom container initial = do
---   (vna) <- await
---   newNode <- liftIO $ toVNode vna
---   let pa = diff initial newNode
---   _ <- liftIO $ do
---     redraw container pa
---   renderDom container newNode
 
 
 -- | Create a pipe to render VDom whenever it's updated

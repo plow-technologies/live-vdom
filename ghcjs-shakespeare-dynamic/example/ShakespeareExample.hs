@@ -68,11 +68,11 @@ modify (env, addr) = do
 showTemp :: Int -> Int -> LiveVDom VDA.JSEvent
 showTemp i j = [gertrude|
 <div>
+  <div>
+    !{return $ textBox undefined Nothing}
   Will the value update?
   <div>
     #{show i}
   <div>
     #{show j}
-  <div>
-    !{return $ textBox undefined Nothing}
 |]

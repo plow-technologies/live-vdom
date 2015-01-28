@@ -3,6 +3,7 @@
 module Shakespeare.Ophelia.Parser.VDOM.Components where
 
 import           Control.Concurrent.STM.Notify
+import Control.Concurrent
 
 
 import           Shakespeare.Ophelia.Parser.VDOM.Event
