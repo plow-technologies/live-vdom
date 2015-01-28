@@ -42,6 +42,7 @@ import           Control.Monad.STM
 import           Shakespeare.Ophelia
 
 import Shakespeare.Ophelia.Parser.VDOM.Components
+
 main :: IO ()
 main = do
   container <- createContainer

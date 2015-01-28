@@ -21,6 +21,10 @@ button addr text = addEvent (JSClick . void $ sendIO addr $ Fired () ) [gertrude
 |]
 
 textBox :: Address (Event String) -> (Maybe String) -> LiveVDom JSEvent
-textBox addr Nothing = addEvent (JSInput $ \str -> putStrLn str) [gertrude|
-  <input type="text">
-|]
+textBox addr mStr = addEvent (JSInput $ \str -> void $ sendIO addr $ Fired str) tb
+  where tb = case mStr of
+                    Nothing -> [gertrude|<input type="text">|]
+                    (Just str) -> [gertrude|
+                                     <input type="text">
+                                       #{str}
+                                   |]
