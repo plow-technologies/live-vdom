@@ -15,6 +15,12 @@ data Event a = Unfired  -- ^ The state of an eveent that has never been used
   deriving (Show, Read, Eq, Ord, Functor)
 
 
+fromEvent :: Event a -> a -> a
+fromEvent Unfired x = x
+fromEvent (Fired x) _ = x
+
+
+
 instance Applicative Event where
   pure a = Fired a
   (Fired f) <*> (Fired x) = Fired $ f x

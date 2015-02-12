@@ -52,11 +52,11 @@ data JSProp = JSPBool Bool
     deriving (Show, Eq)
 
 instance Lift JSProp where
-  lift (JSPBool b) = AppE (ConE jsBoolName) <$> lift b
-  lift (JSPText t) = AppE (ConE jsTextName) <$> lift t
-  lift (JSPInt i) = AppE (ConE jsIntName) <$> lift i
-  lift (JSPFloat f) = AppE (ConE jsFloatName) <$> lift f
-  lift (JSPDouble d) = AppE(ConE jsDoubleName) <$> lift d
+  lift (JSPBool b) = AppE (ConE 'JSPBool) <$> lift b
+  lift (JSPText t) = AppE (ConE 'JSPText) <$> lift t
+  lift (JSPInt i) = AppE (ConE 'JSPInt) <$> lift i
+  lift (JSPFloat f) = AppE (ConE 'JSPFloat) <$> lift f
+  lift (JSPDouble d) = AppE(ConE 'JSPDouble) <$> lift d
 
 jsBoolName, jsTextName, jsIntName, jsFloatName, jsDoubleName :: Name
 jsBoolName = mkVdomName "JSPBool"
