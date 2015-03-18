@@ -1,5 +1,5 @@
 Name:                   vdom-adapter
-Version:                0.0.0
+Version:                0.0.1
 Author:                 Kevin Cotrone <kevincotrone@gmail.com>
 Maintainer:             Kevin Cotrone <kevincotrone@gmail.com>
 License:                BSD3
@@ -17,6 +17,7 @@ Library
   Other-Modules:        VDOM.Adapter.Internal
                       , VDOM.Adapter.Types
   Build-Depends:        base >= 4 && < 5
+                      , ghcjs-base
                       , aeson
                       , text
                       , template-haskell

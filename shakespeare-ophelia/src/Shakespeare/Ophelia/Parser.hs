@@ -60,7 +60,7 @@ fromTree' builder (T.Node st ch) = do
 parseLineForest :: Parser (ParsedTree String)
 parseLineForest = do
   xs <- parseLines
-  let xs' = foldl insertAtLevel [] (toPrepostionTree <$> xs)
+  let xs' = foldl insertAtLevel [] (toPrepostionTree <$> (filter (\(a,b) -> b /= "") xs)) -- Insert at the tree the text that doesn't contain an empty line
   return $ toParsedTree xs'
 
 -- Insert a tree into

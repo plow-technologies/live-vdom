@@ -1,4 +1,4 @@
-module Shakespeare.DynamicSpec.AdapterSpec (main, spec) where
+module Shakespeare.Dynamic.AdapterSpec (main, spec) where
 
 import Test.Hspec
 

@@ -74,4 +74,5 @@ addEvents events props = foldM addEvent props events
   where addEvent pl (JSInput f)  = VD.keypress f pl
         addEvent pl (JSClick f) = (\cb -> VD.click cb pl) <$> (mkCallback f)
         addEvent pl (JSDoubleClick f) = (\cb -> VD.dblclick cb pl) <$> (mkCallback f)
+        addEvent pl (JSLoad f) = print "added" >> VD.load f pl
         mkCallback = syncCallback NeverRetain False

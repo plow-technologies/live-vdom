@@ -7,6 +7,7 @@ import           Control.Monad              hiding (sequence, mapM)
 import           Data.Traversable
 -- import           Pipes.Concurrent -- Not used because of stm-notify
 import           Control.Concurrent.STM.Notify
+import           Control.Concurrent.STM.Message
 import           Prelude                    hiding (sequence, mapM)
 
 import           Language.Haskell.TH

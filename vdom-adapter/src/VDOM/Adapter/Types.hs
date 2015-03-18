@@ -1,6 +1,8 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE TemplateHaskell  #-}
+{-# LANGUAGE ExistentialQuantification #-}
+
 
 module VDOM.Adapter.Types where
 
@@ -10,8 +12,10 @@ import           Data.Text
 import           Data.Typeable
 
 import           Language.Haskell.TH.Syntax
-import Instances.TH.Lift
+import           Instances.TH.Lift
 
+import           GHCJS.Types
+import           GHCJS.Marshal
 -- | A javascript property like 'input=value'
 -- or even 'ng-click="function()"'
 data Property = Property {
@@ -25,12 +29,14 @@ instance Lift Property where
 
 propName :: Name
 propName = mkVdomName "Property"
+
 type TagName = String
 
 
 data JSEvent = JSInput (String -> IO ())
              | JSClick (IO ())
              | JSDoubleClick (IO ())
+             | forall a. JSLoad (JSRef a -> IO ())
 
 
 -- | Intermediary type between ghcjs and haskell

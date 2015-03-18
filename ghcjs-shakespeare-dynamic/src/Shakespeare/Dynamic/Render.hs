@@ -42,7 +42,11 @@ import           Shakespeare.Ophelia.Parser.VDOM.Types
 
 
 runDomI :: DOMNode -> STMEnvelope (LiveVDom VDA.JSEvent) -> IO ()
-runDomI container envLD = foldOnChange  envLD (renderDom container) emptyDiv
+runDomI container envLD = do
+  vdm <- recvIO envLD
+  vn' <- renderDom container emptyDiv vdm          -- Render the initial dom
+  foldOnChange  envLD (renderDom container) vn'    -- pass the rendered dom into the fold that
+                                                   -- renders the dom when it changes
 
 
 runDom :: DOMNode -> (LiveVDom VDA.JSEvent) -> IO ()

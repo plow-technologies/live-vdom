@@ -40,6 +40,7 @@ Library
                       , pipes-concurrency
                       , stm
                       , stm-notify
+                      , vdom-adapter
 
 
 executable example
@@ -65,6 +66,7 @@ executable example
                 , transformers
                 , stm
                 , stm-notify
+                , vdom-adapter
 
   ghcjs-Options:    -O -Wall
 

@@ -36,7 +36,7 @@ Library
                       , split
                       , pipes
                       , pipes-concurrency
-                      , stm-notify
+                      , stm-notify         >= 0.0.1
                       , haskell-src-meta
 
 
@@ -62,6 +62,7 @@ Test-Suite spec
                       , split
                       , shakespeare-ophelia
                       , haskell-src-meta
+                      , stm-notify         >= 0.0.1
                       , stm-notify
 Source-Repository head
   Type:                 git
