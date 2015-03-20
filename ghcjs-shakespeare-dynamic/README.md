@@ -55,6 +55,11 @@ baz (Just i) = [gertrude|
     A value: #{show i}
 |]
 
+main :: IO ()
+main = do
+  container <- createContainer
+  runDomI container (return ()) (return $ foo [Just 4, Nothing, Just 10, Nothing, Nothing, Just 12, Just 15, Just 4])
+
 ```
 
 The things to not in the example are the use of interpolators are:
