@@ -12,6 +12,7 @@
 module Main where
 
 import Data.Aeson
+import TankGauge
 -- Base
 import           Control.Applicative
 import           Data.Maybe
@@ -26,6 +27,7 @@ import           GHCJS.Foreign
 import           GHCJS.Types
 import           GHCJS.Foreign.QQ
 import           GHCJS.VDOM
+import qualified JavaScript.Canvas as Canvas
 import           Shakespeare.Dynamic.Render
 import           Shakespeare.Ophelia.Parser.VDOM
 import           Shakespeare.Ophelia.Parser.VDOM.Event
@@ -33,7 +35,7 @@ import qualified VDOM.Adapter                               as VDA
 
 import           Control.Concurrent
 import           Control.Concurrent.STM.TVar
-import           Control.Monad                              (forever)
+import           Control.Monad                              (forever, void)
 import           Control.Monad.STM
 import           Shakespeare.Ophelia
 
@@ -44,6 +46,7 @@ main :: IO ()
 main = do
   addCss "../../../../css/bootstrap.min.css"
   addCss "../../../../css/bootstrap-responsive.css"
+  addCustomEvent "canvasLoad"
   container <- createContainer
   mb1@(env1,addr1) <- spawnIO $ False
   tgConfig@(tgEnv, tgAddr) <- spawnIO $ TankGaugeWidgetConfig Unfired (Left "Please enter a tank height")
@@ -54,7 +57,8 @@ main = do
     mtg <- recvIO tgEnv
     attemptInsertTank mtg tgs
     )
-  runDomI container (tankGaugeConfig tgConfig sbmtAddr <$> tgsEnv)
+  
+  runDomI container notifyAll (tankGaugeConfig tgConfig sbmtAddr <$> tgsEnv)
 
 
 addCss :: String -> IO ()
@@ -66,14 +70,6 @@ ss.href = `str;
 document.getElementsByTagName("head")[0].appendChild(ss);
 |]
 
-modify :: (STMEnvelope Int, Address Int) -> IO ()
-modify (env, addr) = do
-  atomically $ do
-    x <- recv env
-    send addr $ x + 1
-  return ()
-
-  -- forever $ runEffect $ (fromInput $ (\a b -> (a,b)) <$> inp2 <*> inp) >-> printC
 
 data TankGaugeWidgetConfig = TankGaugeWidgetConfig {
   tankGaugeWidgetName :: Event String
@@ -94,7 +90,6 @@ attemptInsertTank (TankGaugeWidgetConfig eName eHeight) (env, addr) = case (orEm
                                                                                         (Right h) -> do
                                                                                                         xs <- recvIO env
                                                                                                         sendIO addr $ (TankGaugeConfig name h):xs
-                                                                                                        print $ (TankGaugeConfig name h):xs
                                                                                                         return ()
   where orEmpty Unfired = Unfired
         orEmpty (Fired "") = Unfired
@@ -128,7 +123,21 @@ tankGaugeOptions = ["Oil", "Water"]
 printval :: JSRef a -> IO ()
 printval v = [js_|console.log(`v)|]
 
-addTankForm tankMb sbmtBttnAddr = addEvent (VDA.JSLoad  printval) [gertrude|
+getTarget jsr = [js|`jsr.currentTarget|]
+
+notifyAll :: IO ()
+notifyAll = [js_|
+var d = h$vdom.getDelegator();
+d.rawEventListeners.canvasLoad({target:document.querySelector("canvas")});
+|]
+
+-- >> (void . forkIO $ drawTankGauge =<< Canvas.getContext =<< getTarget jsr)))
+tankGaugeCanvas = addEvent (VDA.JSCanvasLoad (\jsr -> void . forkIO $ drawTankGauge =<< Canvas.getContext =<< getTarget jsr)) [gertrude|
+<canvas name="tankGaugeCanvas" id="myCanvas" width="630" height="600">
+ Your browser does not support the HTML5 canvas tag.
+|]
+
+addTankForm tankMb sbmtBttnAddr = [gertrude|
 <form class="form-horizontal">
   <div class="control-group">
     <label class="control-label" for="tankName">
@@ -144,6 +153,7 @@ addTankForm tankMb sbmtBttnAddr = addEvent (VDA.JSLoad  printval) [gertrude|
 
 tankGaugeConfig tankMb sbmtBttnAddr tanks = [gertrude|
 <div>
+  !{return tankGaugeCanvas}
   <div class="text-center">
     <h2 class="unselectable" style="cursor:default;" unselectable="on">
       Location - Conrady 1-28
@@ -166,6 +176,9 @@ tankGaugeConfig tankMb sbmtBttnAddr tanks = [gertrude|
 
 |]
 
+
+
+
 displayTank :: TankGaugeConfig -> LiveVDom VDA.JSEvent
 displayTank (TankGaugeConfig name height) = [gertrude|
 <tr>
@@ -179,33 +192,3 @@ displayTank (TankGaugeConfig name height) = [gertrude|
   <th class="unselectable" style="cursor:default;" unselectable="on">
     Lines
 |]
-
-
-
--- Possible solution to canvas ready events in dom
--- <!DOCTYPE html>
--- <html>
--- <body>
-
--- <canvas name="canvas" id="myCanvas" width="200" height="100" style="border:1px solid #000000;">
--- Your browser does not support the HTML5 canvas tag.
--- </canvas>
--- 
--- 
--- <script>
---   console.log("Running");
---   document.getElementById("myCanvas").addEventListener("canvasReady", function(event) {
---     console.log("DOM fully loaded and parsed");
---   });
--- 
---   var xs = document.getElementsByName("canvas");
---   console.log(xs[0]);
---   
---   for(var i=0;i<xs.length;i++){
---      var event = new CustomEvent('canvasReady',{'canvas': xs[i]});
---      xs[i].dispatchEvent(event);
---   }
--- 
--- </script>
--- </body>
--- </html>

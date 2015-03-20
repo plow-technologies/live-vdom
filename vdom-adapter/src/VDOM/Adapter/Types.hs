@@ -36,7 +36,7 @@ type TagName = String
 data JSEvent = JSInput (String -> IO ())
              | JSClick (IO ())
              | JSDoubleClick (IO ())
-             | forall a. JSLoad (JSRef a -> IO ())
+             | forall a. JSCanvasLoad (JSRef a -> IO ())
 
 
 -- | Intermediary type between ghcjs and haskell

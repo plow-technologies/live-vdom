@@ -18,11 +18,9 @@ module Shakespeare.Dynamic.Render (
 ) where
 
 
-import           Control.Applicative
 import           Control.Monad
 import           Prelude                               hiding (div)
 
-import           Control.Concurrent.STM.TVar
 
 import           GHCJS.Foreign
 import           GHCJS.Foreign.QQ
@@ -35,22 +33,22 @@ import qualified VDOM.Adapter                          as VDA
 import           Pipes
 -- import           Pipes.Concurrent  -- Not used because of stm-notify
 import           Control.Concurrent.STM.Notify
+import Control.Concurrent
 
-
-import           Shakespeare.Ophelia.Parser.VDOM
 import           Shakespeare.Ophelia.Parser.VDOM.Types
 
 
-runDomI :: DOMNode -> STMEnvelope (LiveVDom VDA.JSEvent) -> IO ()
-runDomI container envLD = do
+runDomI :: DOMNode -> IO () -> STMEnvelope (LiveVDom VDA.JSEvent) -> IO ()
+runDomI container postRun envLD = do
   vdm <- recvIO envLD
   vn' <- renderDom container emptyDiv vdm          -- Render the initial dom
+  _ <- atAnimationFrame postRun
   foldOnChange  envLD (renderDom container) vn'    -- pass the rendered dom into the fold that
                                                    -- renders the dom when it changes
 
 
-runDom :: DOMNode -> (LiveVDom VDA.JSEvent) -> IO ()
-runDom c e = runDomI c $ return e 
+runDom :: DOMNode -> IO () -> (LiveVDom VDA.JSEvent) -> IO ()
+runDom c fi e = runDomI c fi $ return e 
 
 renderDom :: DOMNode -> VNode -> (LiveVDom VDA.JSEvent) -> IO VNode
 renderDom container old ld = do
@@ -68,15 +66,7 @@ createContainer :: IO DOMNode
 createContainer = do
   container <- [js| document.createElement('div') |] :: IO DOMNode
   [js_| document.body.appendChild(`container); |] :: IO ()
-  return container        
-
-toSingle :: Monad m => Pipe [a] a m ()
-toSingle = do
-  x <- await
-  case x of
-    n:[] -> yield n
-    [] -> fail "Unable to have vdom with no main node"
-    _ -> fail "Unable to have vdom with more than one main node"
+  return container
 
 
 -- | Create a pipe to render VDom whenever it's updated

@@ -66,7 +66,7 @@ toVNode (VNode events aTagName aProps aChildren) = do
   where tagName = toJSString aTagName
         mChildren [] = VD.noChildren
         mChildren xs = VD.mkChildren xs
-toVNode (VText ev inner) = return $ VD.text $ toJSString inner
+toVNode (VText _ev inner) = return $ VD.text $ toJSString inner
 
 
 addEvents :: [JSEvent] -> VD.Properties -> IO VD.Properties
@@ -74,5 +74,5 @@ addEvents events props = foldM addEvent props events
   where addEvent pl (JSInput f)  = VD.keypress f pl
         addEvent pl (JSClick f) = (\cb -> VD.click cb pl) <$> (mkCallback f)
         addEvent pl (JSDoubleClick f) = (\cb -> VD.dblclick cb pl) <$> (mkCallback f)
-        addEvent pl (JSLoad f) = print "added" >> VD.load f pl
+        addEvent pl (JSCanvasLoad f) = VD.canvasLoad f pl
         mkCallback = syncCallback NeverRetain False
