@@ -1,46 +1,64 @@
+Shakespeare Dynamic
+==
+
 In order to create a web page with vdom there are two things that are needed:
     1. Being able to render dom
-    2. Being able to listen for events on dom and change dom
+    2. Generating dom that's able to be rendered
+    3. Being able to listen for events on dom and change dom
 
 
-Rendering dom is done im the [Render.hs file](src/Shakespeare/Dynamic/Render.hs)
+Rendering DOM
+====
+Rendering dom is done in [Render.hs](src/Shakespeare/Dynamic/Render.hs)
 
-Because this is done using pipes, the missing piece is writing the portion to generate the vdom.
+The external function for DOM rendering is [`runDomI`](src/Shakespeare/Dynamic/Render.hs). This takes a DOMNode to run inside of, an IO action to perform after the first render, and an STMEnvelope of LiveVDom.
 
-Right now my idea is to use pipes concurrency to create a finalizer that is passed to the render function that adds button callbacks. This would look something like:
+Generating LiveVDom
+====
+This is done mostly through the gertrude quasiquoter where you can render a simple language that's similar to hamlet.
 
+for static dom you can use
 ```haskell
-addEvents :: Output () -> Output () -> IO ()
-addEvents output1 output2 = do
-  someButton <- select "#button-id"
-  anotherButton <- select "#some-other-button-id"
-  click (\_ -> (yield ()) >-> toOutput output1) def someButton
-  click (\_ -> (yield ()) >-> toOutput output2) def anotherButton
+foo = [gertrude|
+<div>
+    <some test="works">
+|]
 ```
 
-This solves the problem of needing to re-register events after they have been re-rendered
+This doesn't require ending brackets and the best way to use this is to just have children of a node be indented below the parent.
 
-The second problem (that hasn't been solved at all yet) is the need to be able to listen to dom. The current idea is:
-
+If you want to compose dom inside of dom you can use
 ```haskell
-type LiveDom = Tree (Producer VDomAdapter)
+-- Display a list of Maybe Int
+foo :: [Maybe Int] -> LiveVDom JSEvent 
+foo xs = [gertrude|
+<div>
+    <ul>
+        !{return $ bar xs}
+|]
+        
+-- Map baz across each Maybe Int
+bar :: [Maybe Int] -> LiveVDom JSEvent
+bar xs = [gertrude|
+&{return $ map baz xs} 
+|]
+
+
+-- Display a single option
+baz :: Maybe Int -> LiveVDom JSEvent
+baz Nothing = [gertrude|
+<li>
+   Empty
+|]
+baz (Just i) = [gertrude|
+<li>
+    A value: #{show i}
+|]
+
 ```
 
-Using the monad instance on Producer and the Traversable instance on Tree means that
+The things to not in the example are the use of interpolators.
+1. ```#{expr}``` expects a haskell expression for a string
+2. ```&{expr}``` expects a haskell expression for STMEnvelope [LiveVDom JSEvent]. In the example we use the monad instance on STMEnvelope to use return
+3. ```!{expr}``` expects a haskell expression for STMEnvelope (LiveVDom JSEvent). This uses the monad instance on STMEnvelope again
 
-```haskell
-treeProducer :: LiveDom -> Producer (Tree VDomAdapter)
-treeProducer = sequence
-```
-
-I think using this it would make sense to modify the type of VDom to be
-
-```haskell
-data VDom = VNode -- With children
-          | VText -- Without children
-
-```
-
-
-
-If compiling fails due to transformers/transformers-compat, try to install them first and then run ```cabal install```
