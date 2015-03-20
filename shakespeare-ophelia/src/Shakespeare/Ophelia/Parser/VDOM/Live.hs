@@ -100,13 +100,3 @@ parseStaticText = do
   where addPVText (PLiveVText accum) (PLiveVText new) = return $ PLiveVText $ accum ++ "\n" ++ new
         addPVText _ (PLiveVNode _ _ _) = fail [here| Unable to add node to text as a node|]
         addPVText _ _ = fail [i|Error, somehow parsed VNode instead of PLiveVText. Please report this as a bug|]
-
-
-stupidTest :: String
-stupidTest = [here|
-<some text="something">
-  <with some="other stuff">
-  !{undefined}
-  <it should="atleast">
-    Successfully parse!
-|]
