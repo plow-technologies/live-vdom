@@ -59,7 +59,7 @@ baz (Just i) = [gertrude|
 
 The things to not in the example are the use of interpolators are:
 
-* ```\#{expr}``` expects a haskell expression for a string
+* ```#{expr}``` expects a haskell expression for a string
 * ```&{expr}``` expects a haskell expression for STMEnvelope [LiveVDom JSEvent]. In the example we use the monad instance on STMEnvelope to use return
 * ```!{expr}``` expects a haskell expression for STMEnvelope (LiveVDom JSEvent). This uses the monad instance on STMEnvelope again
 
