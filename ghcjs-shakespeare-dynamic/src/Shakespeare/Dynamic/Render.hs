@@ -38,7 +38,12 @@ import Control.Concurrent
 import           Shakespeare.Ophelia.Parser.VDOM.Types
 
 
-runDomI :: DOMNode -> IO () -> STMEnvelope (LiveVDom VDA.JSEvent) -> IO ()
+-- | Run dom (not forked) forever. This receives the current dom
+-- and then renders it again each time it changes
+runDomI :: DOMNode -- ^ Container to render the dom in
+        -> IO ()   -- ^ Action to run after the FIRST render
+        -> STMEnvelope (LiveVDom VDA.JSEvent)  -- ^ dom to run and watch for changes
+        -> IO ()
 runDomI container postRun envLD = do
   vdm <- recvIO envLD
   vn' <- renderDom container emptyDiv vdm          -- Render the initial dom
@@ -46,10 +51,16 @@ runDomI container postRun envLD = do
   foldOnChange  envLD (renderDom container) vn'    -- pass the rendered dom into the fold that
                                                    -- renders the dom when it changes
 
-
-runDom :: DOMNode -> IO () -> (LiveVDom VDA.JSEvent) -> IO ()
+-- | Run the dom inside a container that 
+runDom :: DOMNode 
+      -> IO () 
+      -> (LiveVDom VDA.JSEvent) 
+      -> IO ()
 runDom c fi e = runDomI c fi $ return e 
 
+
+-- | Given a container, the last rendering, and a current rendering, 
+-- diff the new rendering from the old and return the new model of the dom
 renderDom :: DOMNode -> VNode -> (LiveVDom VDA.JSEvent) -> IO VNode
 renderDom container old ld = do
   let vna = toProducer ld
@@ -62,6 +73,9 @@ renderDom container old ld = do
   redraw container pa
   return new
 
+
+-- | create an empty div to run dom inside of and add it to the 
+-- body of the document
 createContainer :: IO DOMNode
 createContainer = do
   container <- [js| document.createElement('div') |] :: IO DOMNode
@@ -82,9 +96,12 @@ renderDom' container initial = do
     f
   renderDom' container newNode
 
+-- | Redraw the dom using a patch
 redraw :: DOMNode -> Patch -> IO ()
 redraw node pa = pa `seq` atAnimationFrame (patch node pa)
 
+-- | Use the window requestAnimation frame
+-- to run some IO action when able to
 atAnimationFrame :: IO () -> IO ()
 atAnimationFrame m = do
   cb <- syncCallback NeverRetain False m

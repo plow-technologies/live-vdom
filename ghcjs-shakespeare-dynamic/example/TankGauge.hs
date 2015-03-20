@@ -48,10 +48,6 @@ scaleWidthHeight (Scale (absWidth, absHeight)) (width, height) = (floor width' ,
         height' = (fromIntegral $ height * absHeight )/ 1000.0 :: Double
 
 
--- main = do
-  -- ctx <- getContext =<< indexArray 0 . castRef =<< select "#theCanvas"
-  -- drawTankGauge ctx
-
 drawTankGauge :: Context -> IO ()
 drawTankGauge ctx = do
   i <- createImage "../../../../images/test.png"

@@ -69,6 +69,8 @@ toVNode (VNode events aTagName aProps aChildren) = do
 toVNode (VText _ev inner) = return $ VD.text $ toJSString inner
 
 
+-- | Add a list of events to a list of properties
+-- that can be added to a dom object
 addEvents :: [JSEvent] -> VD.Properties -> IO VD.Properties
 addEvents events props = foldM addEvent props events
   where addEvent pl (JSInput f)  = VD.keypress f pl

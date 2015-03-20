@@ -28,6 +28,8 @@ import           Text.Trifecta.Result
 -- ophelia :: QuasiQuoter
 -- ophelia = QuasiQuoter opheliaExp undefined undefined undefined
 
+
+-- | Parser from string to LiveVDom
 liveGertrude :: String -> Q Exp
 liveGertrude s = do
   rN <- parseStringTrees parsePLiveVDom s
@@ -37,5 +39,7 @@ liveGertrude s = do
                     else toLiveVDomTH $ vn !! 0
     Failure fString -> fail $ show fString
 
+-- | Quasiquoter used to parse HTML similar to hamlet
+-- but allow it to be rendered live
 gertrude :: QuasiQuoter
 gertrude = QuasiQuoter liveGertrude undefined undefined undefined
