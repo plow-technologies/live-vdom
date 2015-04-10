@@ -58,7 +58,7 @@ baz (Just i) = [gertrude|
 main :: IO ()
 main = do
   container <- createContainer
-  runDomI container (return ()) (return $ foo [Just 4, Nothing, Just 10, Nothing, Nothing, Just 12, Just 15, Just 4])
+  runDomI container (return ()) (return $ foo [Just 4, Nothing, Just 10, Nothing, Nothing, Just 12, Just 15, Just 4]
 
 ```
 

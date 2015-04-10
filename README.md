@@ -1,28 +1,27 @@
-hi-hspec
+Shakespeare Dynamic
 =================
 
-A template for [hi](https://github.com/fujimura/hi).
+To build the different components you will need:
+Shakespeare Dynamic
+=================
 
-example:
-
+To build the different components you will need:
 ```
-$ hi -m Foo.Bar -p foo-bar  -r git@github.com:fujimura/hi-hspec.git
-$ tree
-.
-├── LICENSE
-├── README.md
-├── foo-bar.cabal
-├── src
-│   └── Foo
-│       ├── Bar
-│       │   └── Internal.hs
-│       └── Bar.hs
-└── test
-    ├── Foo
-    │   └── BarSpec.hs
-    └── Spec.hs
-
-5 directories, 7 files
+shakespeare-dynamic/vdom-adapter
+ghcjs-ffiqq
+ghcjs-vdom
+stm-notify
+ghcjs-canvas
+ghcjs-jquery
 ```
 
-Copyright 2013-2014 Fujimura Daisuke, under the MIT license.
+vdom-adapter
+===
+Higher level access to the ghcjs-vdom library. This also adds events. ghcjs-shakespeare-dynamic uses this to build on top of with quasiquoting and rendering.
+
+ghcjs-vdom
+===
+The main library used for building dom that can be manipulated and modified. This allows for quasiquoting hamlet-like segments with composition of those segments.
+The ghcjs-vdom readme has docs about creating segments and composing them.
+
+
