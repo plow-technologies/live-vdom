@@ -27,8 +27,6 @@ data Property = Property {
 instance Lift Property where
   lift (Property pName pVal) = AppE <$> (AppE (ConE 'Property) <$> (lift pName)) <*> (lift pVal)
 
-propName :: Name
-propName = mkVdomName "Property"
 
 type TagName = String
 
@@ -64,15 +62,7 @@ instance Lift JSProp where
   lift (JSPFloat f) = AppE (ConE 'JSPFloat) <$> lift f
   lift (JSPDouble d) = AppE(ConE 'JSPDouble) <$> lift d
 
-jsBoolName, jsTextName, jsIntName, jsFloatName, jsDoubleName :: Name
-jsBoolName = mkVdomName "JSPBool"
-jsTextName = mkVdomName "JSPText"
-jsIntName = mkVdomName "JSPInt"
-jsFloatName = mkVdomName "JSPFloat"
-jsDoubleName = mkVdomName "JSPDouble"
 
-mkVdomName :: String -> Name
-mkVdomName = mkName
 -- | A provisional class to make building a JSProp
 -- easier
 
