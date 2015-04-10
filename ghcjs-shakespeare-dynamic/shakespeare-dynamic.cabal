@@ -21,6 +21,14 @@ Library
   Exposed-Modules:      Shakespeare.Dynamic
                         Shakespeare.Dynamic.Adapter
                         Shakespeare.Dynamic.Render
+                        Shakespeare.Dynamic.Components
+                        Shakespeare.Dynamic.Event
+                        Shakespeare.Ophelia
+                        Shakespeare.Ophelia.QQ
+                        Shakespeare.Ophelia.Parser
+                        Shakespeare.Ophelia.Parser.VDOM
+                        Shakespeare.Ophelia.Parser.VDOM.Types
+                        Shakespeare.Ophelia.Parser.VDOM.Live
   Other-Modules:        Shakespeare.Dynamic.Internal
   Build-Depends:        base >= 4 && < 5
                       , template-haskell
@@ -35,13 +43,16 @@ Library
                       , vdom-adapter
                       , text
                       , aeson
-                      , shakespeare-ophelia
                       , safe
                       , pipes
                       , pipes-concurrency
                       , stm
                       , stm-notify
                       , vdom-adapter
+                      , trifecta
+                      , parsers
+                      , haskell-src-meta
+                      , here
 
 
 executable example
@@ -62,7 +73,6 @@ executable example
                 , text
                 , aeson
                 , here
-                , shakespeare-ophelia
                 , trifecta
                 , pipes
                 , pipes-concurrency
