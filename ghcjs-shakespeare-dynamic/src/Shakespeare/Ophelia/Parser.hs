@@ -10,16 +10,16 @@ module Shakespeare.Ophelia.Parser (
 )
 where
 
+import           Prelude                 hiding (foldl, sequence)
+
 
 import           Control.Applicative
 import           Control.Monad
 import           Data.Foldable
 import qualified Data.Tree               as T
-import           Prelude                 hiding (foldl, sequence)
-
-
-import           Data.Traversable
 import qualified Data.Traversable        as T
+
+
 import           Text.Parser.Char
 import           Text.Parser.Combinators
 import           Text.Trifecta.Delta
@@ -49,9 +49,7 @@ parseStringTrees builder str = do
 
 
 fromTree :: (Monad m, Functor m) => Parser ([a] -> m a) -> ParsedTree String -> m (Result [a])
-fromTree builder (ParsedTree xs) = do
-  trees <- T.mapM (fromTree' builder) xs
-  return $ sequenceA trees
+fromTree builder (ParsedTree xs) = T.sequenceA <$> T.mapM (fromTree' builder) xs
 
 fromTree' :: (Monad m, Functor m) => Parser ([a] -> m a) -> T.Tree String -> m (Result a)
 fromTree' builder (T.Node st ch) = do
@@ -66,7 +64,7 @@ fromTree' builder (T.Node st ch) = do
 parseLineForest :: Parser (ParsedTree String)
 parseLineForest = do
   xs <- parseLines
-  let xs' = foldl insertAtLevel [] (toPrepostionTree <$> (filter (\(a,b) -> b /= "") xs)) -- Insert at the tree the text that doesn't contain an empty line
+  let xs' = foldl insertAtLevel [] (toPrepostionTree <$> (filter (\(_,b) -> b /= "") xs)) -- Insert at the tree the text that doesn't contain an empty line
   return $ toParsedTree xs'
 
 -- Insert a tree into the current tree structure

@@ -11,9 +11,8 @@ import           Language.Haskell.TH.Syntax
 
 import           Shakespeare.Ophelia.Parser
 import           Shakespeare.Ophelia.Parser.VDOM
-
-import           Shakespeare.Ophelia.Parser.VDOM.Types
 import           Shakespeare.Ophelia.Parser.VDOM.Live
+import           Shakespeare.Ophelia.Parser.VDOM.Types
 
 
 import           Text.Trifecta.Result

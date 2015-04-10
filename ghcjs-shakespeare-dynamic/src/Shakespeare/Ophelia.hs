@@ -4,4 +4,4 @@ module Shakespeare.Ophelia (
   module Shakespeare.Ophelia.QQ
 ) where
 
-import Shakespeare.Ophelia.QQ
+import           Shakespeare.Ophelia.QQ

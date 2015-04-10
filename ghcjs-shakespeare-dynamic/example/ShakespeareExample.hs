@@ -11,36 +11,35 @@
 
 module Main where
 
-import Data.Aeson
-import TankGauge
+import           Data.Aeson
+import           TankGauge
 -- Base
 import           Control.Applicative
 import           Data.Maybe
 -- import           Pipes.Concurrent
-import           Prelude                                    hiding (div)
+import           Prelude                         hiding (div)
 
-import           Control.Concurrent.STM.Notify
 import           Control.Concurrent.STM.Message
+import           Control.Concurrent.STM.Notify
 
 -- GHCJS/VDom/Ophelia
 import           GHCJS.Foreign
-import           GHCJS.Types
 import           GHCJS.Foreign.QQ
+import           GHCJS.Types
 import           GHCJS.VDOM
-import qualified JavaScript.Canvas as Canvas
+import qualified JavaScript.Canvas               as Canvas
+import           Shakespeare.Dynamic.Event
 import           Shakespeare.Dynamic.Render
 import           Shakespeare.Ophelia.Parser.VDOM
-import           Shakespeare.Ophelia.Parser.VDOM.Event
-import qualified VDOM.Adapter                               as VDA
+import           Shakespeare.Dynamic.Components
+import qualified VDOM.Adapter                    as VDA
 
 import           Control.Concurrent
 import           Control.Concurrent.STM.TVar
-import           Control.Monad                              (forever, void)
+import           Control.Monad                   (forever, void)
 import           Control.Monad.STM
 import           Shakespeare.Ophelia
-
-import           Shakespeare.Ophelia.Parser.VDOM.Components
-import Text.Read
+import           Text.Read
 
 main :: IO ()
 main = do
@@ -53,11 +52,10 @@ main = do
   sbmtBttn@(smbtEnv, sbmtAddr) <- spawnIO $ Unfired
   tgs@(tgsEnv, tgsAddr) <- spawnIO []
   sendIO addr1 $ False
-  forkIO $ onChange smbtEnv (\x -> do
+  _ <- forkIO $ onChange smbtEnv (\x -> do
     mtg <- recvIO tgEnv
     attemptInsertTank mtg tgs
     )
-  
   runDomI container notifyAll (tankGaugeConfig tgConfig sbmtAddr <$> tgsEnv)
 
 
@@ -72,12 +70,12 @@ document.getElementsByTagName("head")[0].appendChild(ss);
 
 
 data TankGaugeWidgetConfig = TankGaugeWidgetConfig {
-  tankGaugeWidgetName :: Event String
+  tankGaugeWidgetName   :: Event String
 , tankGaugeWidgetHeight :: Either String Int
 } deriving (Eq, Show)
 
 data TankGaugeConfig = TankGaugeConfig {
-  tankGaugeName :: String
+  tankGaugeName   :: String
 , tankGaugeHeight :: Int
 } deriving (Eq, Show)
 
@@ -89,11 +87,10 @@ attemptInsertTank (TankGaugeWidgetConfig eName eHeight) (env, addr) = case (orEm
                                                                                         (Left err) -> [js_|alert(`err)|]
                                                                                         (Right h) -> do
                                                                                                         xs <- recvIO env
-                                                                                                        sendIO addr $ (TankGaugeConfig name h):xs
-                                                                                                        return ()
+                                                                                                        void $ sendIO addr $ (TankGaugeConfig name h):xs
   where orEmpty Unfired = Unfired
         orEmpty (Fired "") = Unfired
-        orEmpty (Fired x) = Fired x 
+        orEmpty (Fired x) = Fired x
 
 
 setName :: TankGaugeWidgetConfig -> String -> TankGaugeWidgetConfig
@@ -151,6 +148,8 @@ addTankForm tankMb sbmtBttnAddr = [gertrude|
     !{return $ button sbmtBttnAddr [] "Add"}
 |]
 
+tankGaugeConfig :: STMMailbox TankGaugeWidgetConfig
+                         -> Address (Event ()) -> [TankGaugeConfig] -> LiveVDom VDA.JSEvent
 tankGaugeConfig tankMb sbmtBttnAddr tanks = [gertrude|
 <div>
   !{return tankGaugeCanvas}
