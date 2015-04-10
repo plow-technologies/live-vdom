@@ -68,3 +68,18 @@ The interpolators used in the example are:
 * ```&{expr}``` expects a haskell expression for STMEnvelope [LiveVDom JSEvent]. In the example we use the monad instance on STMEnvelope to use return
 * ```!{expr}``` expects a haskell expression for STMEnvelope (LiveVDom JSEvent). This uses the monad instance on STMEnvelope again
 
+
+
+Using events
+===
+
+Events in VDOM.Adapter.Types can be added to DOM by using addEvents. For example:
+
+```haskell
+numberBox :: LiveVDom JSEvent
+numberBox addr = addEvent (JSInput putStrLn) [gertrude|<input type="numberBox">|]
+```
+
+This produces a numberbox that prints the value inside the box each time the input changes.
+
+All events (like JSInput, JSClick, JSDoubleClick, JSCanvasLoad) can be added to dom elements like this. Because of the method of adding events, these are added to the top level node only.
