@@ -25,3 +25,7 @@ The main library used for building dom that can be manipulated and modified. Thi
 The ghcjs-vdom readme has docs about creating segments and composing them.
 
 
+[stm-notify](https://github.com/KevinCotrone/stm-notify)
+===
+This was designed for this use but is still a work in progress. This allows for a simple interface for the dom that can be modified and watched by multiple threads.
+
