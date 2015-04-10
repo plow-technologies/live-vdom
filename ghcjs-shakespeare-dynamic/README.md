@@ -62,7 +62,7 @@ main = do
 
 ```
 
-The things used in the example are the use of interpolators are:
+The interpolators used in the example are:
 
 * ```#{expr}``` expects a haskell expression for a string
 * ```&{expr}``` expects a haskell expression for STMEnvelope [LiveVDom JSEvent]. In the example we use the monad instance on STMEnvelope to use return
