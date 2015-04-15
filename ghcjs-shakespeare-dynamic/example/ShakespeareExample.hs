@@ -15,9 +15,11 @@ import           Data.Aeson
 import           TankGauge
 -- Base
 import           Control.Applicative
+import           Control.Monad                   hiding (sequence)
 import           Data.Maybe
+import           Data.Traversable
 -- import           Pipes.Concurrent
-import           Prelude                         hiding (div)
+import           Prelude                         hiding (div, sequence)
 
 import           Control.Concurrent.STM.Message
 import           Control.Concurrent.STM.Notify
@@ -25,13 +27,14 @@ import           Control.Concurrent.STM.Notify
 -- GHCJS/VDom/Ophelia
 import           GHCJS.Foreign
 import           GHCJS.Foreign.QQ
+import           GHCJS.Marshal
 import           GHCJS.Types
 import           GHCJS.VDOM
 import qualified JavaScript.Canvas               as Canvas
+import           Shakespeare.Dynamic.Components
 import           Shakespeare.Dynamic.Event
 import           Shakespeare.Dynamic.Render
 import           Shakespeare.Ophelia.Parser.VDOM
-import           Shakespeare.Dynamic.Components
 import qualified VDOM.Adapter                    as VDA
 
 import           Control.Concurrent
@@ -58,6 +61,41 @@ main = do
     )
   runDomI container notifyAll (tankGaugeConfig tgConfig sbmtAddr <$> tgsEnv)
 
+
+exportRunTankGauge :: IO ()
+exportRunTankGauge = do
+  cb <- asyncCallback2 NeverRetain $ \jsDomRef tankGaugeConfRef -> do
+    mJsDom <- fromJSRef jsDomRef
+    mTankGaugeConf <- fromJSRef tankGaugeConfRef
+    res <- sequence $ liftA2 runTankGaugeWidget mJsDom mTankGaugeConf
+    when (isNothing res) $ error "Incorrect arguments given to runTankGaugeWidget"
+  [js_| runTankGaugeWidget = `cb; |]
+
+
+instance FromJSON TankGaugeWidgetConfig where
+  parseJSON (Object v) = TankGaugeWidgetConfig <$> v .: "name" <*> v .: "height"
+
+instance FromJSRef TankGaugeWidgetConfig where
+  fromJSRef r = do
+    mVal <- fromJSRef $ castRef r :: IO (Maybe Value)
+    return . join $ resToM  <$> fromJSON <$> mVal
+    where resToM (Success j) = Just j
+          resToM _ = Nothing
+
+
+runTankGaugeWidget :: DOMNode -> TankGaugeWidgetConfig -> IO ()
+runTankGaugeWidget container config = do
+  addCustomEvent "canvasLoad"
+  mb1@(env1,addr1) <- spawnIO $ False
+  tgConfig@(tgEnv, tgAddr) <- spawnIO $ config
+  sbmtBttn@(smbtEnv, sbmtAddr) <- spawnIO $ Unfired
+  tgs@(tgsEnv, tgsAddr) <- spawnIO []
+  sendIO addr1 $ False
+  _ <- forkIO $ onChange smbtEnv (\x -> do
+    mtg <- recvIO tgEnv
+    attemptInsertTank mtg tgs
+    )
+  runDomI container notifyAll (tankGaugeConfig tgConfig sbmtAddr <$> tgsEnv)
 
 addCss :: String -> IO ()
 addCss str = [js_|

@@ -2,8 +2,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Shakespeare.Dynamic.Components where
 
+import           Control.Concurrent
 import           Control.Concurrent.STM.Notify
-import Control.Concurrent
 
 
 import           Shakespeare.Dynamic.Event
@@ -12,11 +12,11 @@ import           Shakespeare.Ophelia.QQ
 
 import           VDOM.Adapter
 
+import           Control.Applicative
+import           Control.Concurrent.STM.Message
 import           Control.Monad
-import Control.Applicative
-import Text.Read
-import Data.Traversable
-import Control.Concurrent.STM.Message
+import           Data.Traversable
+import           Text.Read
 
 
 -- | A basic button component with the default of accepting an STM Address
@@ -32,7 +32,7 @@ buttonWith f props text = (flip addProps) props $ addEvent (JSClick . void $ run
     #{text}
 |]
 
--- | A textbox with type="text" that updates the given address with the 
+-- | A textbox with type="text" that updates the given address with the
 -- current value of the textbox each time the textbox is updated
 textBox :: Address (Event String) -> [Property] -> Maybe String -> LiveVDom JSEvent
 textBox addr = textBoxWith (\str -> sendMessage addr $ Fired str) --addEvent (JSInput $ \str -> void $ sendIO addr $ Fired str) tb
