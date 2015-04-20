@@ -1,5 +1,5 @@
 {-# LANGUAGE CPP, OverloadedStrings, ForeignFunctionInterface, QuasiQuotes #-}
-module TankGauge where
+module Main where
 
 import JavaScript.Canvas
 import JavaScript.JQuery
@@ -38,8 +38,8 @@ testGauge2 = TankGauge 200 150 BlackTank
 
 
 getImage :: TankColor -> IO Image
-getImage BlueTank = createImage "images/animation-tankBlue.png"
-getImage BlackTank = createImage "images/test1.png"
+getImage BlueTank = createImage "animation-tankBlue.png"
+getImage BlackTank = createImage "test1.png"
 
 
 scaleWidthHeight :: Scale -> (Int,Int) -> (Int, Int)
@@ -48,11 +48,15 @@ scaleWidthHeight (Scale (absWidth, absHeight)) (width, height) = (floor width' ,
         height' = (fromIntegral $ height * absHeight )/ 1000.0 :: Double
 
 
+main = do
+  ctx <- getContext =<< indexArray 0 . castRef =<< select "#theCanvas"
+  drawTankGauge ctx
+
 drawTankGauge :: Context -> IO ()
 drawTankGauge ctx = do
-  i <- createImage "images/test.png"
-  g <- createImage "images/animation-tankBlue.png"
-  b <- createImage "images/test1.png"
+  i <- createImage "test.png"
+  g <- createImage "animation-tankBlue.png"
+  b <- createImage "test1.png"
   let sc = Scale (200,200)
   renderableGauge <- toRenderable testGauge
   let render = drawTank ctx i renderableGauge
@@ -113,6 +117,8 @@ drawImagePercentage ctx img (ctxWidth, ctxHeight) perc = do
 scalePerc :: (Double,Double) -> Double -> Double
 scalePerc (minP, maxP) p = minP + (maxP * p)
 
+getPictureSlice :: Double -> Double -> Double -> Double
+getPictureSlice minHeight maxHeight percentage = minHeight + ((maxHeight - minHeight) * percentage)
 
 drawTriangle :: Context -> IO ()
 drawTriangle ctx = do
