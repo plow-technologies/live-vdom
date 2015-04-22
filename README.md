@@ -24,6 +24,8 @@ ghcjs-vdom
 The main library used for building dom that can be manipulated and modified. This allows for quasiquoting hamlet-like segments with composition of those segments.
 The ghcjs-vdom readme has docs about creating segments and composing them.
 
+Currently using a forked version found [here](https://github.com/KevinCotrone/ghcjs-vdom)
+
 
 [stm-notify](https://github.com/KevinCotrone/stm-notify)
 ===
