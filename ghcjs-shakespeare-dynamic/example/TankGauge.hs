@@ -183,7 +183,7 @@ imageWidth img = [js|`img.width|]
 onAnimation :: IO () -> IO ()
 onAnimation action = do
   mv <- newEmptyMVar
-  cb <- syncCallback AlwaysRetain True (action >> putMVar mv ())
+  cb <- syncCallback NeverRetain True (action >> putMVar mv ())
   [js_|window.requestAnimationFrame(`cb)|]
   takeMVar mv
 
@@ -194,7 +194,7 @@ createImage imageName = do
   image <- newImage
   [js_| `image.src = `imageName|]
   mv <- newEmptyMVar
-  cb <- syncCallback AlwaysRetain True (putMVar mv ()) -- Put the mvar when the image has been loaded
+  cb <- syncCallback NeverRetain True (putMVar mv ()) -- Put the mvar when the image has been loaded
   [js_|`image.onload = `cb|]
   _ <- takeMVar mv
   return image
