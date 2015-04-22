@@ -3,14 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <title>AngularJS GHCJS example</title>
-  
+  <link rel="stylesheet" type="text/css" href="../css/bootstrap-responsive.css">
+  <link rel="stylesheet" type="text/css" href="../css/bootstrap.min.css">
   <script src="../dist/build/example/example.jsexe/all.js"></script>
   <script src="angular.min.js"></script>
+  <script src="script.js"></script>
 
   
 </head>
 <body ng-app="ghcjsApp">
-  <script src="script.js"></script>
   <div ghcjs-directive handler="runTankGaugeWidget" config="{name: 'Name', height: 100}"></div>
 </div>
 </body>

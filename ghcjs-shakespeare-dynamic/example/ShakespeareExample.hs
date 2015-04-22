@@ -48,9 +48,9 @@ import           Text.Read
 
 main :: IO ()
 main = do
+  putStrLn "Haskell loaded"
   addCustomEvent "canvasLoad"
   exportRunTankGauge
-  [js_|ghcjsLoaded = true;|]
   -- addCss "../../../../css/bootstrap.min.css"
   -- addCss "../../../../css/bootstrap-responsive.css"
   -- addCustomEvent "canvasLoad"

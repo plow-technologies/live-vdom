@@ -38,8 +38,8 @@ testGauge2 = TankGauge 200 150 BlackTank
 
 
 getImage :: TankColor -> IO Image
-getImage BlueTank = createImage "images/animation-tankBlue.png"
-getImage BlackTank = createImage "images/test1.png"
+getImage BlueTank = createImage "static/img/blue-tank.png"
+getImage BlackTank = createImage "static/img/black-tank.png"
 
 
 scaleWidthHeight :: Scale -> (Int,Int) -> (Int, Int)
@@ -50,9 +50,9 @@ scaleWidthHeight (Scale (absWidth, absHeight)) (width, height) = (floor width' ,
 
 drawTankGauge :: Context -> IO ()
 drawTankGauge ctx = do
-  i <- createImage "images/test.png"
-  g <- createImage "images/animation-tankBlue.png"
-  b <- createImage "images/test1.png"
+  i <- createImage "static/img/green-tank.png"
+  g <- createImage "static/img/blue-tank.png"
+  b <- createImage "static/img/black-tank.png"
   let sc = Scale (200,200)
   renderableGauge <- toRenderable testGauge
   let render = drawTank ctx i renderableGauge
