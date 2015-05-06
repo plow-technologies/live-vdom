@@ -57,7 +57,7 @@ exportRunTankGauge = do
     mJsDom <- fromJSRef jsDomRef
     mTankGaugeConf <- fromJSRef tankGaugeConfRef
     res <- sequence $ liftA2 runTankGaugeWidget mJsDom mTankGaugeConf
-    when (isNothing res) $ error $ "Incorrect arguments given to runTankGaugeWidget \n" ++ ((show mTankGaugeConf))
+    when (isNothing res) $ error $ "Incorrect arguments given to runTankGaugeWidget \n" ++ (show mTankGaugeConf)
   [js_| runTankGaugeWidget = `cb; |]
 
 

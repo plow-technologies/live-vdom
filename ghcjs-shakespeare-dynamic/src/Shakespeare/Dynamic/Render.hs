@@ -50,15 +50,15 @@ runDomI container postRun envLD = do
   foldOnChange  envLD (renderDom container) vn'    -- pass the rendered dom into the fold that
                                                    -- renders the dom when it changes
 
--- | Run the dom inside a container that 
-runDom :: DOMNode 
-      -> IO () 
-      -> (LiveVDom VDA.JSEvent) 
+-- | Run the dom inside a container that
+runDom :: DOMNode
       -> IO ()
-runDom c fi e = runDomI c fi $ return e 
+      -> (LiveVDom VDA.JSEvent)
+      -> IO ()
+runDom c fi e = runDomI c fi $ return e
 
 
--- | Given a container, the last rendering, and a current rendering, 
+-- | Given a container, the last rendering, and a current rendering,
 -- diff the new rendering from the old and return the new model of the dom
 renderDom :: DOMNode -> VNode -> (LiveVDom VDA.JSEvent) -> IO VNode
 renderDom container old ld = do
@@ -73,7 +73,7 @@ renderDom container old ld = do
   return new
 
 
--- | create an empty div to run dom inside of and add it to the 
+-- | create an empty div to run dom inside of and add it to the
 -- body of the document
 createContainer :: IO DOMNode
 createContainer = do
