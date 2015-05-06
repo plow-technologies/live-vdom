@@ -6,11 +6,9 @@ module Shakespeare.Ophelia.QQ (
 
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Quote
-import           Language.Haskell.TH.Syntax
 
 
 import           Shakespeare.Ophelia.Parser
-import           Shakespeare.Ophelia.Parser.VDOM
 import           Shakespeare.Ophelia.Parser.VDOM.Live
 import           Shakespeare.Ophelia.Parser.VDOM.Types
 

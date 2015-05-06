@@ -33,7 +33,6 @@ import qualified VDOM.Adapter                          as VDA
 import           Pipes
 -- import           Pipes.Concurrent  -- Not used because of stm-notify
 import           Control.Concurrent.STM.Notify
-import Control.Concurrent
 
 import           Shakespeare.Ophelia.Parser.VDOM.Types
 

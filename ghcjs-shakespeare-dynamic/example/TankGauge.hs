@@ -2,12 +2,9 @@
 module TankGauge where
 
 import JavaScript.Canvas
-import JavaScript.JQuery
-import GHCJS.Types
 import GHCJS.Foreign
 import Control.Applicative
 import Control.Concurrent
-import Control.Concurrent.MVar
 import GHCJS.Foreign.QQ
 
 import Data.Text
@@ -51,9 +48,6 @@ scaleWidthHeight (Scale (absWidth, absHeight)) (width, height) = (floor width' ,
 drawTankGauge :: Context -> IO ()
 drawTankGauge ctx = do
   i <- createImage "static/img/green-tank.png"
-  g <- createImage "static/img/blue-tank.png"
-  b <- createImage "static/img/black-tank.png"
-  let sc = Scale (200,200)
   renderableGauge <- toRenderable testGauge
   let render = drawTank ctx i renderableGauge
   scale 3 3 ctx
@@ -69,7 +63,6 @@ drawTank :: Context -> Image -> RenderableTank -> Double -> IO ()
 drawTank ctx baseImg  (TankGauge maxVal val overlay) progress = do
   let fullPercentage = progress * (val / maxVal)
       currentAnimVal = progress * val
-  (width, height) <- imageDimensions overlay
   drawImage baseImg 0 0 124 200 ctx
   drawImagePercentage ctx overlay (124,200) fullPercentage
   drawLines ctx

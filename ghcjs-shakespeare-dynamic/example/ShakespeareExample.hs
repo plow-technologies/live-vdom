@@ -15,11 +15,10 @@ import           Data.Aeson
 import           TankGauge
 -- Base
 import           Control.Applicative
-import           Control.Monad                   hiding (sequence)
 import           Data.Maybe
 import           Data.Traversable
 -- import           Pipes.Concurrent
-import           Prelude                         hiding (div, sequence)
+import           Prelude                        hiding (div, sequence)
 
 import           Control.Concurrent.STM.Message
 import           Control.Concurrent.STM.Notify
@@ -31,18 +30,16 @@ import           GHCJS.Foreign.QQ
 import           GHCJS.Marshal
 import           GHCJS.Types
 import           GHCJS.VDOM
-import qualified JavaScript.Canvas               as Canvas
+import qualified JavaScript.Canvas              as Canvas
 import           Shakespeare.Dynamic.Components
 import           Shakespeare.Dynamic.Event
 import           Shakespeare.Dynamic.Render
-import           Shakespeare.Ophelia.Parser.VDOM
-import qualified VDOM.Adapter                    as VDA
+import qualified VDOM.Adapter                   as VDA
 
 import           Control.Concurrent
-import           Control.Concurrent.STM.TVar
-import           Control.Monad                   (forever, void)
+import           Control.Monad                  (void, when, join)
 import           Control.Monad.STM
-import           Data.Text                        (Text)
+import           Data.Text                      (Text)
 import           Shakespeare.Ophelia
 import           Text.Read
 
@@ -51,22 +48,6 @@ main = do
   putStrLn "Haskell loaded"
   addCustomEvent "canvasLoad"
   exportRunTankGauge
-  -- addCss "../../../../css/bootstrap.min.css"
-  -- addCss "../../../../css/bootstrap-responsive.css"
-  -- addCustomEvent "canvasLoad"
-  -- container <- createContainer
-  -- mb1@(env1,addr1) <- spawnIO $ False
-  -- tgConfig@(tgEnv, tgAddr) <- spawnIO $ TankGaugeWidgetConfig Unfired (Left "Please enter a tank height")
-  -- sbmtBttn@(smbtEnv, sbmtAddr) <- spawnIO $ Unfired
-  -- tgs@(tgsEnv, tgsAddr) <- spawnIO []
-  -- tmContainer <- newEmptyTMVarIO
-  -- sendIO addr1 $ False
-  -- _ <- forkIO $ onChange smbtEnv (\x -> do
-  --   mtg <- recvIO tgEnv
-  --   attemptInsertTank mtg tgs
-  --   )
-  -- forkTankGauge tmContainer
-  -- runDomI container notifyAll (tankGaugeConfig tmContainer tgConfig sbmtAddr <$> tgsEnv)
 
 
 exportRunTankGauge :: IO ()
@@ -95,15 +76,12 @@ instance FromJSRef TankGaugeWidgetConfig where
 runTankGaugeWidget :: DOMNode -> TankGaugeWidgetConfig -> IO ()
 runTankGaugeWidget container config = do
   addCustomEvent "canvasLoad"
-  mb1@(env1,addr1) <- spawnIO $ False
-  tgConfig@(tgEnv, tgAddr) <- spawnIO $ config
-  sbmtBttn@(smbtEnv, sbmtAddr) <- spawnIO $ Unfired
-  tgs@(tgsEnv, tgsAddr) <- spawnIO []
-  tmContainer <- newEmptyTMVarIO
+  tgConfig@(tgEnv, _) <- spawnIO $ config
+  (smbtEnv, sbmtAddr) <- spawnIO $ Unfired
+  tgs@(tgsEnv, _) <- spawnIO []
   tmContainer <- newEmptyTMVarIO
   forkTankGauge tmContainer
-  sendIO addr1 $ False
-  _ <- forkIO $ onChange smbtEnv (\x -> do
+  _ <- forkIO $ onChange smbtEnv (\_ -> do
     mtg <- recvIO tgEnv
     attemptInsertTank mtg tgs
     )
@@ -187,11 +165,14 @@ forkTankGauge dm = void . forkIO $ do
   drawTankGauge canvasContext
 
 -- >> (void . forkIO $ drawTankGauge =<< Canvas.getContext =<< getTarget jsr)))
+tankGaugeCanvas :: TMVar (JSRef a) -> LiveVDom VDA.JSEvent
 tankGaugeCanvas tmContainer = addEvent (VDA.JSCanvasLoad (\jsr -> void . atomically $ tryPutTMVar tmContainer jsr)) [gertrude|
 <canvas name="tankGaugeCanvas" id="myCanvas" width="630" height="600">
   Your browser does not support the HTML5 canvas tag.
 |]
 
+addTankForm :: STMMailbox TankGaugeWidgetConfig
+                     -> Address (Event ()) -> LiveVDom VDA.JSEvent
 addTankForm tankMb sbmtBttnAddr = [gertrude|
 <form class="form-horizontal">
   <div class="control-group">

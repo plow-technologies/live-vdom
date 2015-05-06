@@ -2,7 +2,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Shakespeare.Dynamic.Components where
 
-import           Control.Concurrent
 import           Control.Concurrent.STM.Notify
 
 
