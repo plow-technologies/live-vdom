@@ -49,7 +49,8 @@ main = do
   addCustomEvent "canvasLoad"
   exportRunTankGauge
 
-
+-- | Create a function accessible from other javascript
+-- resources that is equivilent to runTankGaugeWidget(domNode, TankGaugeWidgetConfig)
 exportRunTankGauge :: IO ()
 exportRunTankGauge = do
   addCustomEvent "canvasLoad"

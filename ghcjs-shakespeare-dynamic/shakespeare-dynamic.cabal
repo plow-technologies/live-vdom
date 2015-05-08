@@ -40,7 +40,6 @@ Library
                       , ghcjs-base 
                       , ghcjs-dom
                       , ghcjs-canvas
-                      , vdom-adapter
                       , text
                       , aeson
                       , safe
@@ -48,7 +47,7 @@ Library
                       , pipes-concurrency
                       , stm
                       , stm-notify
-                      , vdom-adapter
+                      , vdom-adapter >= 0.0.2
                       , trifecta
                       , parsers
                       , haskell-src-meta
@@ -79,7 +78,6 @@ executable example
                 , transformers
                 , stm
                 , stm-notify
-                , vdom-adapter
 
   ghcjs-Options:    -O -Wall
 

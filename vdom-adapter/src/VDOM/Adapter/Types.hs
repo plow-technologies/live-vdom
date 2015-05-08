@@ -16,6 +16,8 @@ import           Instances.TH.Lift
 
 import           GHCJS.Types
 import           GHCJS.Marshal
+
+
 -- | A javascript property like 'input=value'
 -- or even 'ng-click="function()"'
 data Property = Property {
@@ -32,6 +34,7 @@ type TagName = String
 
 
 data JSEvent = JSInput (String -> IO ())
+             | JSKeypress (String -> IO ())
              | JSClick (IO ())
              | JSDoubleClick (IO ())
              | forall a. JSCanvasLoad (JSRef a -> IO ())

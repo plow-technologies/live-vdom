@@ -73,7 +73,8 @@ toVNode (VText _ev inner) = return $ VD.text $ toJSString inner
 -- that can be added to a dom object
 addEvents :: [JSEvent] -> VD.Properties -> IO VD.Properties
 addEvents events props = foldM addEvent props events
-  where addEvent pl (JSInput f)  = VD.keypress f pl
+  where addEvent pl (JSInput f)  = VD.oninput f pl
+        addEvent pl (JSKeypress f) = VD.keypress f pl
         addEvent pl (JSClick f) = (\cb -> VD.click cb pl) <$> (mkCallback f)
         addEvent pl (JSDoubleClick f) = (\cb -> VD.dblclick cb pl) <$> (mkCallback f)
         addEvent pl (JSCanvasLoad f) = VD.canvasLoad f pl
