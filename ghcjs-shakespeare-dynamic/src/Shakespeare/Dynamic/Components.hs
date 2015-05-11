@@ -39,13 +39,13 @@ textBox addr = textBoxWith (\str -> sendMessage addr $ Fired str) --addEvent (JS
 -- | The same as a textbox with string but it parses the string to a number and
 -- has type="numberBox"
 numberBox :: Address (Event Int) -> LiveVDom JSEvent
-numberBox addr = addEvent (JSInput $ \str -> (print str) >> (void . Data.Traversable.sequence $ sendIO addr <$> Fired <$> (readMaybe str))) tb
+numberBox addr = addEvent (JSInput $ \str -> void . Data.Traversable.sequence $ sendIO addr <$> Fired <$> (readMaybe str)) tb
   where tb = [gertrude|<input type="number">|]
 
 -- | The same as a textbox with string but it parses the string to a number and
 -- has type="numberBox"
 numberBoxWith :: (Event Int -> Message b) -> LiveVDom JSEvent
-numberBoxWith f = addEvent (JSInput $ \str -> (print str) >> (void . runMessages . f . maybeToEvent $ readMaybe str)) tb
+numberBoxWith f = addEvent (JSInput $ \str -> void . runMessages . f . maybeToEvent $ readMaybe str) tb
   where tb = [gertrude|<input type="number">|]
         maybeToEvent (Nothing) = Unfired
         maybeToEvent (Just e) = Fired e
