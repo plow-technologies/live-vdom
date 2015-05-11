@@ -131,10 +131,10 @@ setTankHeight tg heightStr = case readMaybe heightStr of
                                 Nothing -> tg {tankGaugeWidgetHeight = Left "Unable to parse height"}
 
 
-modifyTankHeight :: STMMailbox TankGaugeWidgetConfig -> String -> Message Bool
+modifyTankHeight :: STMMailbox TankGaugeWidgetConfig -> String -> Message ()
 modifyTankHeight mb = modifyMailbox mb setTankHeight
 
-modifyTankName :: STMMailbox TankGaugeWidgetConfig -> String -> Message Bool
+modifyTankName :: STMMailbox TankGaugeWidgetConfig -> String -> Message ()
 modifyTankName mb = modifyMailbox mb setName
 
 displayOption :: String -> LiveVDom VDA.JSEvent
