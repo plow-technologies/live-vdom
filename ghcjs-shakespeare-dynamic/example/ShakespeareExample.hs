@@ -140,7 +140,7 @@ modifyTankName mb = modifyMailbox mb setName
 displayOption :: String -> LiveVDom VDA.JSEvent
 displayOption str = [gertrude|
 <option>
-  #{str}
+  #{return str}
 |]
 
 tankGaugeOptions :: [String]
@@ -223,11 +223,11 @@ displayTank (TankGaugeConfig name height) = [gertrude|
 <tr>
   <th>
   <th class="unselectable" style="cursor:default;" unselectable="on">
-    #{name}
+    #{return name}
   <th class="unselectable" style="cursor:default;" unselectable="on">
     Tank Color
   <th class="unselectable" style="cursor:default;" unselectable="on">
-    #{show height}
+    #{return $ show height}
   <th class="unselectable" style="cursor:default;" unselectable="on">
     Lines
 |]

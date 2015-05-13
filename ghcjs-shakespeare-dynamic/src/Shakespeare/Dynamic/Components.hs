@@ -29,7 +29,7 @@ button addr = buttonWith (sendMessage addr $ Fired ())
 buttonWith :: Message b -> [Property] -> String -> LiveVDom JSEvent
 buttonWith f props text = (flip addProps) props $ addEvent (JSClick . void $ runMessages f) [gertrude|
   <button type="button">
-    #{text}
+    #{return text}
 |]
 
 -- | A textbox with type="text" that updates the given address with the
@@ -59,7 +59,7 @@ textBoxWith f props mStr = (flip addProps) props $ addEvent (JSKeypress $ \str -
                     Nothing -> [gertrude|<input type="text">|]
                     (Just str) -> [gertrude|
                                      <input type="text">
-                                       #{str}
+                                       #{return str}
                                    |]
 
 
@@ -83,9 +83,9 @@ selectList kvMap messageFunc props (Just selected) = (flip addProps) props $ add
 option :: Bool -> String -> LiveVDom JSEvent
 option False opt = [gertrude|
 <option>
-  #{opt}
+  #{return opt}
 |]
 option True opt = [gertrude|
 <option selected="true">
-  #{opt}
+  #{return opt}
 |]

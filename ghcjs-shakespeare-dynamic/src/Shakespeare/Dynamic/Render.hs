@@ -44,10 +44,14 @@ runDomI :: DOMNode -- ^ Container to render the dom in
         -> STMEnvelope (LiveVDom VDA.JSEvent)  -- ^ dom to run and watch for changes
         -> IO ()
 runDomI container postRun envLD = do
+  putStrLn "Running"
   vdm <- recvIO envLD
+  putStrLn "Received" 
   vn' <- renderDom container emptyDiv vdm          -- Render the initial dom
+  putStrLn "Rendered"
   _ <- atAnimationFrame postRun
-  foldOnChange  envLD (renderDom container) vn'    -- pass the rendered dom into the fold that
+  putStrLn "Folding"
+  foldOnChangeWith waitForDom envLD (renderDom container) vn'    -- pass the rendered dom into the fold that
                                                    -- renders the dom when it changes
 
 -- | Run the dom inside a container that
