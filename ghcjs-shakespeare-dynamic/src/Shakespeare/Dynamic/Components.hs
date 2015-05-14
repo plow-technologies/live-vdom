@@ -17,6 +17,7 @@ import           Control.Monad
 import           Data.Traversable
 import           Text.Read
 import qualified Data.Map as Map
+import qualified Data.Sequence as S
 
 
 -- | A basic button component with the default of accepting an STM Address
@@ -66,14 +67,14 @@ textBoxWith f props mStr = (flip addProps) props $ addEvent (JSKeypress $ \str -
 selectList :: (Eq v) => Map.Map String v -> (v -> IO ()) -> [Property] -> Maybe v -> LiveVDom JSEvent
 selectList kvMap messageFunc props Nothing = (flip addProps) props $ addEvent (JSInput lookupKey) [gertrude|
 <select>
-  &{return $ Prelude.map ((option False) . fst) (Map.toList kvMap)}
+  &{return $ fmap ((option False) . fst) (S.fromList $ Map.toList kvMap)}
 |]
   where lookupKey s = case Map.lookup s kvMap of
                         (Nothing) -> return ()
                         (Just val) -> messageFunc val
 selectList kvMap messageFunc props (Just selected) = (flip addProps) props $ addEvent (JSInput lookupKey) [gertrude|
 <select>
-  &{return $ Prelude.map (\(k,v) -> option (v == selected) k) (Map.toList kvMap)}
+  &{return $ fmap (\(k,v) -> option (v == selected) k) (S.fromList $ Map.toList kvMap)}
 |]
   where lookupKey s = case Map.lookup s kvMap of
                         (Nothing) -> return ()
@@ -89,3 +90,15 @@ option True opt = [gertrude|
 <option selected="true">
   #{return opt}
 |]
+
+
+forEach :: STMMailbox (S.Seq a) -- ^ Values to map over
+          -> (a -> (a -> Message ()) -> LiveVDom b) -- ^ Function to generate dom given an element and a function to change the current value
+          -> STMEnvelope (S.Seq (LiveVDom b))     
+forEach mb func = (fmap buildDom) <$> withIndeces
+  where withIndeces = S.zip <$> stmIndexList <*> env
+        stmIndexList = (increasingSeq . S.length) <$> env
+        increasingSeq = S.fromList . ((flip take) [1..])
+        buildDom (i, val) = func val (updateValue i)
+        updateValue i newVal = modifyMailbox mb (S.update i newVal)
+        env = fst mb

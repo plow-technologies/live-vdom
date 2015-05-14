@@ -17,8 +17,8 @@ import           TankGauge
 import           Control.Applicative
 import           Data.Maybe
 import           Data.Traversable
--- import           Pipes.Concurrent
 import           Prelude                        hiding (div, sequence)
+import qualified Data.Sequence as S
 
 import           Control.Concurrent.STM.Message
 import           Control.Concurrent.STM.Notify
@@ -79,7 +79,7 @@ runTankGaugeWidget container config = do
   addCustomEvent "canvasLoad"
   tgConfig@(tgEnv, _) <- spawnIO $ config
   (smbtEnv, sbmtAddr) <- spawnIO $ Unfired
-  tgs@(tgsEnv, _) <- spawnIO []
+  tgs@(tgsEnv, _) <- spawnIO $ S.empty
   tmContainer <- newEmptyTMVarIO
   forkTankGauge tmContainer
   _ <- forkIO $ onChange smbtEnv (\_ -> do
@@ -109,33 +109,33 @@ data TankGaugeConfig = TankGaugeConfig {
 } deriving (Eq, Show)
 
 
-attemptInsertTank :: TankGaugeWidgetConfig -> STMMailbox ([TankGaugeConfig]) -> IO ()
+attemptInsertTank :: TankGaugeWidgetConfig -> STMMailbox (S.Seq TankGaugeConfig) -> IO ()
 attemptInsertTank (TankGaugeWidgetConfig eName eHeight) (env, addr) = case (orEmpty eName) of
                                                                         Unfired -> [js_|alert("Unable to add tank because there is no name")|]
                                                                         Fired name -> case eHeight of
                                                                                         (Left err) -> [js_|alert(`err)|]
                                                                                         (Right h) -> do
                                                                                                         xs <- recvIO env
-                                                                                                        void $ sendIO addr $ (TankGaugeConfig name h):xs
+                                                                                                        void $ sendIO addr $ (TankGaugeConfig name h) S.<| xs
   where orEmpty Unfired = Unfired
         orEmpty (Fired "") = Unfired
         orEmpty (Fired x) = Fired x
 
 
-setName :: TankGaugeWidgetConfig -> String -> TankGaugeWidgetConfig
-setName tg name = tg {tankGaugeWidgetName = Fired name}
+setName :: String -> TankGaugeWidgetConfig -> TankGaugeWidgetConfig
+setName name tg = tg {tankGaugeWidgetName = Fired name}
 
-setTankHeight :: TankGaugeWidgetConfig -> String -> TankGaugeWidgetConfig
-setTankHeight tg heightStr = case readMaybe heightStr of
+setTankHeight :: String -> TankGaugeWidgetConfig -> TankGaugeWidgetConfig
+setTankHeight heightStr tg  = case readMaybe heightStr of
                                 (Just h) -> tg {tankGaugeWidgetHeight = Right h}
                                 Nothing -> tg {tankGaugeWidgetHeight = Left "Unable to parse height"}
 
 
 modifyTankHeight :: STMMailbox TankGaugeWidgetConfig -> String -> Message ()
-modifyTankHeight mb = modifyMailbox mb setTankHeight
+modifyTankHeight mb str = modifyMailbox mb (setTankHeight str)
 
 modifyTankName :: STMMailbox TankGaugeWidgetConfig -> String -> Message ()
-modifyTankName mb = modifyMailbox mb setName
+modifyTankName mb str = modifyMailbox mb (setName str)
 
 displayOption :: String -> LiveVDom VDA.JSEvent
 displayOption str = [gertrude|
@@ -189,7 +189,7 @@ addTankForm tankMb sbmtBttnAddr = [gertrude|
 |]
 
 tankGaugeConfig :: TMVar DOMNode -> STMMailbox TankGaugeWidgetConfig
-                         -> Address (Event ()) -> [TankGaugeConfig] -> LiveVDom VDA.JSEvent
+                         -> Address (Event ()) -> S.Seq TankGaugeConfig -> LiveVDom VDA.JSEvent
 tankGaugeConfig tmContainer tankMb sbmtBttnAddr tanks = [gertrude|
 <div>
   !{return $ tankGaugeCanvas tmContainer}
@@ -211,7 +211,7 @@ tankGaugeConfig tmContainer tankMb sbmtBttnAddr tanks = [gertrude|
         <th class="unselectable" style="cursor:default;" unselectable="on">
           Lines
     <tbody>
-      &{return $ map displayTank tanks}
+      &{return $ fmap displayTank tanks}
 
 |]
 

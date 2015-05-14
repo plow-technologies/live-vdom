@@ -1,19 +1,25 @@
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE RankNTypes        #-}
 {-# LANGUAGE TemplateHaskell   #-}
 module Shakespeare.Ophelia.Parser.VDOM.Types where
 
-import           Control.Applicative
-import           Control.Monad                 hiding (mapM, sequence)
-import           Data.Traversable
 
+-- Generic imports
+import           Control.Applicative
 import           Control.Concurrent.STM
 import           Control.Concurrent.STM.Notify
-import           Control.Concurrent.STM.TMVar
-import           Prelude                       hiding (mapM, sequence)
+import           Control.Monad                 hiding (mapM, mapM_, sequence)
+import           Data.Foldable                 (mapM_, toList, traverse_)
+import qualified Data.Sequence                 as S
+import           Data.Traversable
+import           Prelude                       hiding (mapM, mapM_, sequence)
 
+
+-- Template haskell related
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Syntax
 
+-- VDOM related
 import           Data.String
 import           VDOM.Adapter
 
@@ -24,9 +30,9 @@ instance (IsString a) => IsString (STMEnvelope a) where
 -- | Resulting type from the quasiquoted gertrude
 data LiveVDom a =
      LiveVText {liveVTextEvents :: [a], liveVirtualText :: STMEnvelope String } -- ^ Child text with  no tag name, properties, or children
-   | LiveVNode {liveVNodeEvents :: [a], liveVNodeTagName :: TagName, liveVNodePropsList :: [Property], liveVNodeChildren :: [LiveVDom a]} -- ^ Basic tree structor for a node with children and properties
+   | LiveVNode {liveVNodeEvents :: [a], liveVNodeTagName :: TagName, liveVNodePropsList :: [Property], liveVNodeChildren :: (S.Seq (LiveVDom a))} -- ^ Basic tree structor for a node with children and properties
    | LiveChild {liveVChildEvents :: [a], liveVChild :: STMEnvelope (LiveVDom a)} -- ^ DOM that can change
-   | LiveChildren {liveVChildEvents :: [a], liveVChildren :: STMEnvelope [LiveVDom a]} -- ^ A child that can change
+   | LiveChildren {liveVChildEvents :: [a], liveVChildren :: STMEnvelope (S.Seq (LiveVDom a))} -- ^ A child that can change
 
 
 -- | Type that gertrude is parsed into
@@ -57,18 +63,18 @@ toLiveVDomTH (PLiveVNode tn pl ch) = do
   qtn <- lift tn
   qpl <- lift pl
   cExp <- sequence $ toLiveVDomTH <$> ch
-  return $ AppE (AppE (AppE (AppE (ConE 'LiveVNode) (ListE [])) qtn) qpl) (ListE cExp)
+  return $ AppE (AppE (AppE (AppE (ConE 'LiveVNode) (ListE [])) qtn) qpl) (AppE (VarE 'S.fromList) (ListE cExp))
 toLiveVDomTH (PLiveChild e) = return $ AppE (AppE (ConE  'LiveChild) (ListE [])) e
 toLiveVDomTH (PLiveChildren e) = return $ AppE (AppE (ConE  'LiveChildren) (ListE [])) e
 toLiveVDomTH (PLiveInterpText t) = return $ AppE (AppE (ConE 'LiveVText) (ListE [])) t
 
 
 -- | Transform LiveDom to VNode so that it can be processed
-toProducer :: LiveVDom JSEvent -> STMEnvelope [VNodeAdapter]
-toProducer (LiveVText ev t) = (\text -> [VText ev text]) <$> t
+toProducer :: LiveVDom JSEvent -> STMEnvelope (S.Seq VNodeAdapter)
+toProducer (LiveVText ev t) = (\text -> S.singleton $ VText ev text) <$> t
 toProducer (LiveVNode ev tn pl ch) = do
-  ch' <- mapM toProducer ch
-  return $ [VNode ev tn pl (join ch')]
+  ch' <- traverse toProducer ch
+  return . S.singleton $ VNode ev tn pl $ toList (join ch')
 toProducer (LiveChild ev ivc) = join $ toProducer <$> (addEvents ev <$> ivc)
 toProducer (LiveChildren ev lvc) = do
   xs <- join $ sequence <$> (fmap (toProducer . addEvents ev)) <$> lvc
@@ -94,13 +100,16 @@ addProps :: LiveVDom a -> [Property] -> LiveVDom a
 addProps (LiveVNode evs tn pl ch) pl' = LiveVNode evs tn (pl ++ pl') ch
 addProps l _ = l
 
+-- | add a dom listener to a a given node and all children of that node
 addDomListener :: TMVar () -> LiveVDom a -> IO ()
-addDomListener tm (LiveVText evs ch) = return ()
-addDomListener tm (LiveVNode evs tn pls ch) = mapM_ (addDomListener tm) ch
-addDomListener tm (LiveChild evs vch) = (atomically $ addListener vch tm) >> 
+addDomListener tm (LiveVText _ t) = atomically $ addListener t tm
+addDomListener tm (LiveVNode _ _ _ ch) = traverse_ (addDomListener tm) ch
+addDomListener tm (LiveChild _ vch) = (atomically $ addListener vch tm) >>
                                             (addDomListener tm =<< recvIO vch)
-addDomListener tm (LiveChildren evs vchs) = (atomically $ addListener vchs tm) >> 
-                                                (mapM_ (addDomListener tm) =<< recvIO vchs)
+addDomListener tm (LiveChildren _ vchs) = do
+  atomically $ addListener vchs tm
+  xs <- recvIO vchs
+  mapM_ (addDomListener tm) xs
 
 waitForDom :: STMEnvelope (LiveVDom a) -> IO ()
 waitForDom envDom = do

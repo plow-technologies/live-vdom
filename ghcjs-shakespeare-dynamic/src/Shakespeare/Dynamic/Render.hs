@@ -19,6 +19,7 @@ module Shakespeare.Dynamic.Render (
 
 
 import           Control.Monad
+import qualified Data.Sequence                         as S
 import           Prelude                               hiding (div)
 
 
@@ -46,7 +47,7 @@ runDomI :: DOMNode -- ^ Container to render the dom in
 runDomI container postRun envLD = do
   putStrLn "Running"
   vdm <- recvIO envLD
-  putStrLn "Received" 
+  putStrLn "Received"
   vn' <- renderDom container emptyDiv vdm          -- Render the initial dom
   putStrLn "Rendered"
   _ <- atAnimationFrame postRun
@@ -68,9 +69,9 @@ renderDom :: DOMNode -> VNode -> (LiveVDom VDA.JSEvent) -> IO VNode
 renderDom container old ld = do
   let vna = toProducer ld
   vnaL <- recvIO vna
-  vna' <- if length vnaL > 1
+  vna' <- if S.length vnaL > 1
     then fail "Having more than one node as the parent is illegal"
-    else return $ vnaL !! 0
+    else return $ S.index vnaL 0
   new <- toVNode vna'
   let pa = diff old new
   redraw container pa
@@ -81,7 +82,7 @@ renderDom container old ld = do
 -- body of the document
 createContainer :: IO DOMNode
 createContainer = do
-  container <- [js| document.createElement('div') |] :: IO DOMNode
+  container <- [js| document.createElement('div'); |] :: IO DOMNode
   [js_| document.body.appendChild(`container); |] :: IO ()
   return container
 

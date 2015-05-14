@@ -28,6 +28,8 @@ import           Shakespeare.Ophelia.Parser
 
 import           Language.Haskell.Meta.Parse
 
+import qualified Data.Sequence as S
+
 parseLiveDom :: (Applicative f, Monad f) => String -> f (Result [PLiveVDom])
 parseLiveDom = parseStringTrees parsePLiveVDom
 
