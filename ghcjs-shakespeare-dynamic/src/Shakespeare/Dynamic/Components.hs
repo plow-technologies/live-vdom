@@ -98,7 +98,7 @@ forEach :: STMMailbox (S.Seq a) -- ^ Values to map over
 forEach mb func = (fmap buildDom) <$> withIndeces
   where withIndeces = S.zip <$> stmIndexList <*> env
         stmIndexList = (increasingSeq . S.length) <$> env
-        increasingSeq = S.fromList . ((flip take) [1..])
+        increasingSeq = S.fromList . ((flip take) [0,1..])
         buildDom (i, val) = func val (updateValue i)
         updateValue i newVal = modifyMailbox mb (S.update i newVal)
         env = fst mb
