@@ -102,3 +102,9 @@ forEach mb func = (fmap buildDom) <$> withIndeces
         buildDom (i, val) = func val (updateValue i)
         updateValue i newVal = modifyMailbox mb (S.update i newVal)
         env = fst mb
+
+withMailbox :: STMMailbox a
+              -> (a -> (a -> Message ()) -> LiveVDom b)
+              -> STMEnvelope (LiveVDom b)
+withMailbox mb@(env, _) buildFunc = buildDom <$> env
+  where buildDom value = buildFunc value (\newValue -> modifyMailbox mb (const newValue))
