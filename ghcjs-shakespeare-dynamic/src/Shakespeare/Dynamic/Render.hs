@@ -82,7 +82,7 @@ renderDom container old ld = do
 -- body of the document
 createContainer :: IO DOMNode
 createContainer = do
-  container <- [js| document.createElement('div'); |] :: IO DOMNode
+  container <- [js| document.createElement('div') |] :: IO DOMNode
   [js_| document.body.appendChild(`container); |] :: IO ()
   return container
 
