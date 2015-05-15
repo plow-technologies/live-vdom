@@ -93,16 +93,23 @@ option True opt = [gertrude|
 
 
 forEach :: STMMailbox (S.Seq a) -- ^ Values to map over
-          -> (a -> (a -> Message ()) -> LiveVDom b) -- ^ Function to generate dom given an element and a function to change the current value
+          -> (a -> (Maybe a -> Message ()) -> LiveVDom b) -- ^ Function to generate dom given an element and a function to change the current value
           -> STMEnvelope (S.Seq (LiveVDom b))     
 forEach mb func = (fmap buildDom) <$> withIndeces
   where withIndeces = S.zip <$> stmIndexList <*> env
         stmIndexList = (increasingSeq . S.length) <$> env
         increasingSeq = S.fromList . ((flip take) [0,1..])
         buildDom (i, val) = func val (updateValue i)
-        updateValue i newVal = modifyMailbox mb (S.update i newVal)
+        updateValue i (Just newVal) = modifyMailbox mb (S.update i newVal)
+        updateValue i _ = modifyMailbox mb (remove i)
         env = fst mb
+        remove i ts = appendL  $ S.viewl <$> S.splitAt i ts
+        appendL (xs,(_ S.:< ys)) = xs S.>< ys
+        appendL (xs,_) = xs
 
+-- | A little wrapper around the applicative instance
+-- on STMEnvelope but allows for updating the current value
+-- as well
 withMailbox :: STMMailbox a
               -> (a -> (a -> Message ()) -> LiveVDom b)
               -> STMEnvelope (LiveVDom b)
