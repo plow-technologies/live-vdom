@@ -2,7 +2,7 @@ module Shakespeare.Dynamic where
 
 
 
-import Text.Hamlet.Parse
+-- import Text.Hamlet.Parse
 
 import GHCJS.VDOM ()
 
@@ -70,5 +70,5 @@ newtype Module = Module [String]
 |-}
 
 
-testParseLines :: Result (Maybe NewlineStyle, [Doc])
-testParseLines = parseDoc defaultHamletSettings "<h1> test" 
+-- testParseLines :: Result (Maybe NewlineStyle, [Doc])
+-- testParseLines = parseDoc defaultHamletSettings "<h1> test" 

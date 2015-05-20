@@ -34,7 +34,6 @@ Library
                       , template-haskell
                       , containers
                       , parsec
-                      , shakespeare == 2.0.1.7569
                       , ghcjs-vdom
                       , ghcjs-ffiqq
                       , ghcjs-base 
