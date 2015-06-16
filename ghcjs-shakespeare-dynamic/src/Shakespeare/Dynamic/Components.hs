@@ -81,6 +81,11 @@ selectList kvMap messageFunc props (Just selected) = (flip addProps) props $ add
                         (Just val) -> messageFunc val
 
 
+selectListWith :: (Ord k, Eq v) => ((k,v) -> String) -> Map.Map k v -> (v -> IO ()) -> [Property] -> Maybe v -> LiveVDom JSEvent
+selectListWith buildDisplay kvMap = selectList displayMap
+  where displayMap = Map.fromList $ (\t@(_,v) -> (buildDisplay t, v) ) <$> Map.toList kvMap
+
+
 option :: Bool -> String -> LiveVDom JSEvent
 option False opt = [gertrude|
 <option>

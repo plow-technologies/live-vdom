@@ -4,8 +4,8 @@ angular.module('ghcjsApp', [])
   .directive('ghcjsDirective', function() {
     return {
       scope: {
-        handler: '@handler',
-        config: '='
+        handler: '@handler', // Handler is passed in as a string
+        config: '='          // Config is passed in as a JSObject
       },
       link: function (scope, element) {
         function whenExists() {
@@ -17,7 +17,7 @@ angular.module('ghcjsApp', [])
                 } else {
                     arguments.callee();
                 }
-            }, 10);
+            }, 10); // Wait for the function to exist
         }
         whenExists(); // Run the check for handler and config
       }
