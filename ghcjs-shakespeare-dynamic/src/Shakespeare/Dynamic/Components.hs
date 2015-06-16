@@ -70,14 +70,14 @@ selectList kvMap messageFunc props Nothing = (flip addProps) props $ addEvent (J
   &{return $ fmap ((option False) . fst) (S.fromList $ Map.toList kvMap)}
 |]
   where lookupKey s = case Map.lookup s kvMap of
-                        (Nothing) -> return ()
+                        (Nothing) -> debug $ "Error looking up " ++ (show s)
                         (Just val) -> messageFunc val
 selectList kvMap messageFunc props (Just selected) = (flip addProps) props $ addEvent (JSInput $ \str -> runMessages $ lookupKey str) [gertrude|
 <select>
   &{return $ fmap (\(k,v) -> option (v == selected) k) (S.fromList $ Map.toList kvMap)}
 |]
   where lookupKey s = case Map.lookup s kvMap of
-                        (Nothing) -> return ()
+                        (Nothing) -> debug $ "Error looking up " ++ (show s)
                         (Just val) -> messageFunc val
 
 
