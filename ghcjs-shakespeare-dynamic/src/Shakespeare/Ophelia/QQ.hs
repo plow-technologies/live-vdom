@@ -33,7 +33,9 @@ liveGertrude s = do
   case rN of
     Success vn -> if length vn > 1
                     then fail "One or more nodes can not be the main html. Maybe you're trying to use ophelia?"
-                    else toLiveVDomTH $ vn !! 0
+                    else if length vn < 1
+                      then fail "Unable to parse empty template"
+                      else toLiveVDomTH $ vn !! 0
     Failure fString -> fail $ show fString
 
 -- | Quasiquoter used to parse HTML similar to hamlet
