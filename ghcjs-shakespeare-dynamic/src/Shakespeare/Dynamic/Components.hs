@@ -64,15 +64,15 @@ textBoxWith f props mStr = (flip addProps) props $ addEvent (JSKeypress $ \str -
                                    |]
 
 
-selectList :: (Eq v) => Map.Map String v -> (v -> IO ()) -> [Property] -> Maybe v -> LiveVDom JSEvent
-selectList kvMap messageFunc props Nothing = (flip addProps) props $ addEvent (JSInput lookupKey) [gertrude|
+selectList :: (Eq v) => Map.Map String v -> (v -> Message ()) -> [Property] -> Maybe v -> LiveVDom JSEvent
+selectList kvMap messageFunc props Nothing = (flip addProps) props $ addEvent (JSInput $ \str -> runMessages $ lookupKey str) [gertrude|
 <select>
   &{return $ fmap ((option False) . fst) (S.fromList $ Map.toList kvMap)}
 |]
   where lookupKey s = case Map.lookup s kvMap of
                         (Nothing) -> return ()
                         (Just val) -> messageFunc val
-selectList kvMap messageFunc props (Just selected) = (flip addProps) props $ addEvent (JSInput lookupKey) [gertrude|
+selectList kvMap messageFunc props (Just selected) = (flip addProps) props $ addEvent (JSInput $ \str -> runMessages $ lookupKey str) [gertrude|
 <select>
   &{return $ fmap (\(k,v) -> option (v == selected) k) (S.fromList $ Map.toList kvMap)}
 |]
@@ -81,7 +81,7 @@ selectList kvMap messageFunc props (Just selected) = (flip addProps) props $ add
                         (Just val) -> messageFunc val
 
 
-selectListWith :: (Ord k, Eq v) => ((k,v) -> String) -> Map.Map k v -> (v -> IO ()) -> [Property] -> Maybe v -> LiveVDom JSEvent
+selectListWith :: (Ord k, Eq v) => ((k,v) -> String) -> Map.Map k v -> (v -> Message ()) -> [Property] -> Maybe v -> LiveVDom JSEvent
 selectListWith buildDisplay kvMap = selectList displayMap
   where displayMap = Map.fromList $ (\t@(_,v) -> (buildDisplay t, v) ) <$> Map.toList kvMap
 
