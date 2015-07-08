@@ -36,8 +36,7 @@ Library
                       , parsec
                       , ghcjs-vdom
                       , ghcjs-ffiqq
-                      , ghcjs-base 
-                      , ghcjs-dom
+                      , ghcjs-base
                       , ghcjs-canvas
                       , text
                       , aeson
