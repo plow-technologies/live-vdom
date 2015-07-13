@@ -82,16 +82,16 @@ toProducer (LiveChildren ev lvc) = do
 
 -- | Add an event to a LiveVDom
 addEvent :: a -> LiveVDom a -> LiveVDom a
-addEvent ev (LiveVText evs ch) = LiveVText (evs ++ [ev]) ch -- ^ Child text with  no tag name, properties, or children
-addEvent ev (LiveVNode evs tn pls ch) = LiveVNode (evs ++ [ev]) tn pls ch -- ^ Basic tree structor for a node with children and properties
-addEvent ev (LiveChild evs vch) = LiveChild (evs ++ [ev]) vch -- ^ DOM that can change
-addEvent ev (LiveChildren evs vchs) = LiveChildren (evs ++ [ev]) vchs -- ^ A child that can change
+addEvent ev (LiveVText evs ch) = LiveVText (evs ++ [ev]) ch -- Child text with  no tag name, properties, or children
+addEvent ev (LiveVNode evs tn pls ch) = LiveVNode (evs ++ [ev]) tn pls ch -- Basic tree structor for a node with children and properties
+addEvent ev (LiveChild evs vch) = LiveChild (evs ++ [ev]) vch -- DOM that can change
+addEvent ev (LiveChildren evs vchs) = LiveChildren (evs ++ [ev]) vchs -- A child that can change
 
 -- | Add multiple events to LiveVDom
 addEvents :: [a] -> LiveVDom a -> LiveVDom a
-addEvents ev (LiveVText evs ch) = LiveVText (evs ++ ev) ch -- ^ Child text with  no tag name, properties, or children
-addEvents ev (LiveVNode evs tn pls ch) = LiveVNode (evs ++ ev) tn pls ch -- ^ Basic tree structor for a node with children and properties
-addEvents ev (LiveChild evs vch) = LiveChild (evs ++ ev) vch -- ^ DOM that can change
+addEvents ev (LiveVText evs ch) = LiveVText (evs ++ ev) ch -- Child text with  no tag name, properties, or children
+addEvents ev (LiveVNode evs tn pls ch) = LiveVNode (evs ++ ev) tn pls ch -- Basic tree structor for a node with children and properties
+addEvents ev (LiveChild evs vch) = LiveChild (evs ++ ev) vch -- DOM that can change
 addEvents ev (LiveChildren evs vchs) = LiveChildren (evs ++ ev) vchs
 
 -- | Add a list of property to LiveVNode if it is a liveVNode

@@ -20,6 +20,13 @@ import qualified Data.Map as Map
 import qualified Data.Sequence as S
 
 
+-- class HasBox a where
+--   box :: Address (Event a) -> [Property] -> Maybe a -> LiveVDom JSEvent
+--   boxWith :: (Event a -> Message b) -> [Property] -> LiveVDom JSEvent
+
+-- instance HasBox String where
+--   box = 
+
 -- | A basic button component with the default of accepting an STM Address
 button :: Address (Event ()) -> [Property] -> String -> LiveVDom JSEvent
 button addr = buttonWith (sendMessage addr $ Fired ())
