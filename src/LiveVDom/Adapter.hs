@@ -1,12 +1,12 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# LANGUAGE  QuasiQuotes #-}
-module Shakespeare.Dynamic.Adapter where
+module LiveVDom.Adapter where
 
 import           Control.Applicative
 import           Control.Monad
 import qualified Data.Traversable    as TR
 
-import           VDOM.Adapter
+import           LiveVDom.Adapter.Types
 
 import           GHCJS.Foreign
 import           GHCJS.Marshal

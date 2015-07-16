@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE RankNTypes        #-}
 {-# LANGUAGE TemplateHaskell   #-}
-module Shakespeare.Ophelia.Parser.VDOM.Types where
+module LiveVDom.Types where
 
 
 -- Generic imports
@@ -21,7 +21,7 @@ import           Language.Haskell.TH.Syntax
 
 -- VDOM related
 import           Data.String
-import           VDOM.Adapter
+import           LiveVDom.Adapter.Types
 
 
 instance (IsString a) => IsString (STMEnvelope a) where

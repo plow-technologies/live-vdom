@@ -1,8 +1,6 @@
 {-# LANGUAGE DeriveFunctor #-}
-module Shakespeare.Dynamic.Event where
+module LiveVDom.Event where
 
-
-import Data.Aeson
 
 import           Control.Applicative
 import           Control.Monad
@@ -62,11 +60,3 @@ instance (Monoid m) => Monoid (Event m) where
   mappend (Fired e) Unfired = Fired e
   mappend Unfired Unfired = Unfired
 
-
-instance (FromJSON a) => FromJSON (Event a) where
-  parseJSON Null = pure Unfired
-  parseJSON obj = Fired <$> parseJSON obj
-
-instance (ToJSON a) => ToJSON (Event a) where
-  toJSON Unfired = Null
-  toJSON (Fired a) = toJSON a

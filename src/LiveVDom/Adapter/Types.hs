@@ -4,7 +4,7 @@
 {-# LANGUAGE ExistentialQuantification #-}
 
 
-module VDOM.Adapter.Types where
+module LiveVDom.Adapter.Types where
 
 
 import           Control.Applicative

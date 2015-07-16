@@ -9,9 +9,8 @@
  -}
 
 
-module Shakespeare.Dynamic.Render (
+module LiveVDom.Render (
   renderDom
-, renderDom'
 , runDom
 , runDomI
 , createContainer
@@ -28,14 +27,12 @@ import           GHCJS.Foreign.QQ
 import           GHCJS.VDOM
 
 
-import           Shakespeare.Dynamic.Adapter
-import qualified VDOM.Adapter                          as VDA
+import           LiveVDom.Adapter
+import qualified LiveVDom.Adapter.Types                          as VDA
 
-import           Pipes
--- import           Pipes.Concurrent  -- Not used because of stm-notify
 import           Control.Concurrent.STM.Notify
 
-import           Shakespeare.Ophelia.Parser.VDOM.Types
+import           LiveVDom.Types
 
 
 -- | Run dom (not forked) forever. This receives the current dom
@@ -81,20 +78,6 @@ createContainer = do
   container <- [js| document.createElement('div') |] :: IO DOMNode
   [js_| document.body.appendChild(`container); |] :: IO ()
   return container
-
-
--- | Create a pipe to render VDom whenever it's updated
-renderDom' :: DOMNode                      -- ^ Container ov the vdom
-          -> VNode                           -- ^ Initial VDom
-          -> Consumer (VDA.VNodeAdapter, IO ()) IO () -- ^ Consumer to push VDom to with a finalizer
-renderDom' container initial = do
-  (vna, f) <- await
-  newNode <- liftIO $ toVNode vna
-  let pa = diff initial newNode
-  _ <- liftIO $ do
-    redraw container pa
-    f
-  renderDom' container newNode
 
 -- | Redraw the dom using a patch
 redraw :: DOMNode -> Patch -> IO ()
