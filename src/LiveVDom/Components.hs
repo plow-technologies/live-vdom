@@ -10,7 +10,7 @@ import           LiveVDom.Types
 import           LiveVDom.Adapter.Types
 
 import           Control.Applicative
-import           Control.Concurrent.STM.Message
+import           LiveVDom.Message
 import           Control.Monad
 import           Data.Traversable
 import           Data.Text (pack)

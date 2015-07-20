@@ -14,12 +14,12 @@ Library
   HS-Source-Dirs:       src
   GHC-Options:          -Wall
   Exposed-Modules:      LiveVDom.Adapter
+                        LiveVDom.Adapter.Types
                         LiveVDom.Render
                         LiveVDom.Components
                         LiveVDom.Event
                         LiveVDom.Types
   Other-Modules:        LiveVDom.Internal
-                        LiveVDom.Adapter.Types
   Build-Depends:        base >= 4 && < 5
                       , template-haskell
                       , containers
