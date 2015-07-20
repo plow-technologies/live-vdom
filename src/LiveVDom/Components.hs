@@ -1,13 +1,24 @@
 {-# LANGUAGE OverloadedStrings #-}
-module LiveVDom.Components where
+module LiveVDom.Components
+  (
+    button
+  , buttonWith
+  , textBox
+  , textBoxWith
+  , numberBox
+  , numberBoxWith
+  , selectList
+  , selectListWith
+  ) where
 
 import           Control.Concurrent.STM.Notify
 
 
 import           LiveVDom.Event
-import           LiveVDom.Types
+import           LiveVDom.Types hiding (LiveVDom)
 
 import           LiveVDom.Adapter.Types
+import           LiveVDom.UserTypes
 
 import           Control.Applicative
 import           LiveVDom.Message
@@ -27,31 +38,31 @@ import qualified Data.Sequence as S
 --   box = 
 
 -- | A basic button component with the default of accepting an STM Address
-button :: Address (Event ()) -> [Property] -> String -> LiveVDom JSEvent
+button :: Address (Event ()) -> [Property] -> String -> LiveVDom
 button addr = buttonWith (sendMessage addr $ Fired ())
 
 -- | Add a button where you can send/receive non-blocking
 -- messages with the Message monad
 -- when the button is pressed
-buttonWith :: Message b -> [Property] -> String -> LiveVDom JSEvent
+buttonWith :: Message b -> [Property] -> String -> LiveVDom
 buttonWith f props text = (flip addProps) props $ addEvent (JSClick . void $ runMessages f) $ 
   LiveVNode [] "button" [Property "type" $ JSPText "button"] S.empty
 
 -- | A textbox with type="text" that updates the given address with the
 -- current value of the textbox each time the textbox is updated
-textBox :: Address (Event String) -> [Property] -> Maybe String -> LiveVDom JSEvent
+textBox :: Address (Event String) -> [Property] -> Maybe String -> LiveVDom
 textBox addr = textBoxWith (\str -> sendMessage addr $ Fired str) --addEvent (JSInput $ \str -> void $ sendIO addr $ Fired str) tb
 
 -- | The same as a textbox with string but it parses the string to a number and
 -- has type="numberBox"
-numberBox :: Address (Event Int) -> LiveVDom JSEvent
+numberBox :: Address (Event Int) -> LiveVDom
 numberBox addr = addEvent (JSInput $ \str -> void . Data.Traversable.sequence $ sendIO addr <$> Fired <$> (readMaybe str)) tb
   where tb = LiveVNode [] "input" [Property "type" $ JSPText "text"] S.empty
   
 
 -- | The same as a textbox with string but it parses the string to a number and
 -- has type="numberBox"
-numberBoxWith :: (Event Int -> Message b) -> LiveVDom JSEvent
+numberBoxWith :: (Event Int -> Message b) -> LiveVDom
 numberBoxWith f = addEvent (JSInput $ \str -> void . runMessages . f . maybeToEvent $ readMaybe str) tb
   where tb = LiveVNode [] "input" [Property "type" $ JSPText "number"] S.empty
         maybeToEvent (Nothing) = Unfired
@@ -59,7 +70,7 @@ numberBoxWith f = addEvent (JSInput $ \str -> void . runMessages . f . maybeToEv
 
 -- | A textbox that allows you to send non-blocking messages with the Message
 -- monad whenever the input changes
-textBoxWith :: (String -> Message b) -> [Property] -> Maybe String -> LiveVDom JSEvent
+textBoxWith :: (String -> Message b) -> [Property] -> Maybe String -> LiveVDom
 textBoxWith f props mStr = (flip addProps) props $ addEvent (JSKeypress $ \str -> void . runMessages $ f str) tb
   where
     tb = LiveVNode [] "input" 
@@ -68,7 +79,12 @@ textBoxWith f props mStr = (flip addProps) props $ addEvent (JSKeypress $ \str -
                    S.empty
 
 -- | A dropdown list
-selectList :: (Eq v) => Map.Map String v -> (v -> Message ()) -> [Property] -> Maybe v -> LiveVDom JSEvent
+selectList :: (Eq v) 
+           => Map.Map String v -- ^ Map from strings (displayed in the menu) to values
+           -> (v -> Message ()) -- ^ Selection handler, given the value associated with the selected string
+           -> [Property] -- ^ Extra properties for the select element
+           -> Maybe v -- ^ Default selection
+           -> LiveVDom
 selectList kvMap messageFunc props mSelected = 
     (flip addProps) props
   $ addEvent (JSInput $ \str -> runMessages $ lookupKey str)
@@ -79,18 +95,18 @@ selectList kvMap messageFunc props mSelected =
                         (Just val) -> messageFunc val
 
 -- | A dropdown list built from non-string keys and a function to derive selector names from key-value pairs
-selectListWith :: (Ord k, Eq v) => ((k,v) -> String) -> Map.Map k v -> (v -> Message ()) -> [Property] -> Maybe v -> LiveVDom JSEvent
+selectListWith :: (Ord k, Eq v) => ((k,v) -> String) -> Map.Map k v -> (v -> Message ()) -> [Property] -> Maybe v -> LiveVDom
 selectListWith buildDisplay kvMap = selectList displayMap
   where displayMap = Map.fromList $ (\t@(_,v) -> (buildDisplay t, v) ) <$> Map.toList kvMap
 
 
-option :: Bool -> String -> LiveVDom JSEvent
+option :: Bool -> String -> LiveVDom
 option selected opt = LiveVNode [] "option" (if selected then [Property "selected" $ JSPBool True] else []) S.empty
 
 
 forEach :: STMMailbox (S.Seq a) -- ^ Values to map over
-          -> (a -> (Maybe a -> Message ()) -> LiveVDom b) -- ^ Function to generate dom given an element and a function to change the current value
-          -> STMEnvelope (S.Seq (LiveVDom b))     
+          -> (a -> (Maybe a -> Message ()) -> LiveVDom) -- ^ Function to generate dom given an element and a function to change the current value
+          -> STMEnvelope (S.Seq (LiveVDom))     
 forEach mb func = (fmap buildDom) <$> withIndices
   where withIndices = S.zip <$> stmIndexList <*> env
         stmIndexList = (increasingSeq . S.length) <$> env
@@ -107,7 +123,7 @@ forEach mb func = (fmap buildDom) <$> withIndices
 -- on STMEnvelope but allows for updating the current value
 -- as well
 withMailbox :: STMMailbox a
-              -> (a -> (a -> Message ()) -> LiveVDom b)
-              -> STMEnvelope (LiveVDom b)
+              -> (a -> (a -> Message ()) -> LiveVDom)
+              -> STMEnvelope (LiveVDom)
 withMailbox mb@(env, _) buildFunc = buildDom <$> env
   where buildDom value = buildFunc value (\newValue -> modifyMailbox mb (const newValue))

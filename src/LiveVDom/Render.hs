@@ -32,14 +32,15 @@ import qualified LiveVDom.Adapter.Types                          as VDA
 
 import           Control.Concurrent.STM.Notify
 
-import           LiveVDom.Types
+import           LiveVDom.Types hiding (LiveVDom)
+import           LiveVDom.UserTypes
 
 
 -- | Run dom (not forked) forever. This receives the current dom
 -- and then renders it again each time it changes
 runDomI :: DOMNode -- ^ Container to render the dom in
         -> IO ()   -- ^ Action to run after the FIRST render
-        -> STMEnvelope (LiveVDom VDA.JSEvent)  -- ^ dom to run and watch for changes
+        -> STMEnvelope LiveVDom -- ^ dom to run and watch for changes
         -> IO ()
 runDomI container postRun envLD = do
   vdm <- recvIO envLD
@@ -51,14 +52,14 @@ runDomI container postRun envLD = do
 -- | Run the dom inside a container that
 runDom :: DOMNode
       -> IO ()
-      -> (LiveVDom VDA.JSEvent)
+      -> LiveVDom
       -> IO ()
 runDom c fi e = runDomI c fi $ return e
 
 
 -- | Given a container, the last rendering, and a current rendering,
 -- diff the new rendering from the old and return the new model of the dom
-renderDom :: DOMNode -> VNode -> (LiveVDom VDA.JSEvent) -> IO VNode
+renderDom :: DOMNode -> VNode -> LiveVDom -> IO VNode
 renderDom container old ld = do
   let vna = toProducer ld
   vnaL <- recvIO vna
