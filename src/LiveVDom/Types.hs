@@ -27,7 +27,7 @@ import           LiveVDom.Adapter.Types
 instance (IsString a) => IsString (STMEnvelope a) where
   fromString = return . fromString
 
--- | Resulting type from the quasiquoted gertrude
+-- | Resulting type from the quasiquoted valentine
 data LiveVDom a =
      LiveVText {liveVTextEvents :: [a], liveVirtualText :: STMEnvelope String } -- ^ Child text with  no tag name, properties, or children
    | LiveVNode {liveVNodeEvents :: [a], liveVNodeTagName :: TagName, liveVNodePropsList :: [Property], liveVNodeChildren :: (S.Seq (LiveVDom a))} -- ^ Basic tree structor for a node with children and properties
@@ -35,7 +35,7 @@ data LiveVDom a =
    | LiveChildren {liveVChildEvents :: [a], liveVChildren :: STMEnvelope (S.Seq (LiveVDom a))} -- ^ A child that can change
 
 
--- | Type that gertrude is parsed into
+-- | Type that valentine is parsed into
 data PLiveVDom =
      PLiveVText {pLiveVirtualText :: String } -- ^ Child text with  no tag name, properties, or children
    | PLiveVNode {pLiveVNodeTagName :: TagName, pLiveVNodePropsList :: [Property], pLiveVNodeChildren :: [PLiveVDom]} -- ^ Basic tree structor for a node with children and properties
