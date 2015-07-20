@@ -30,7 +30,7 @@ Library
                       , text
                       , safe
                       , stm
-                      , stm-notify
+                      , stm-notify >= 0.2
                       , here
                       , th-lift-instances
 
