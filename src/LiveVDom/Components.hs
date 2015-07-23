@@ -46,7 +46,7 @@ button addr = buttonWith (sendMessage addr $ Fired ())
 -- when the button is pressed
 buttonWith :: Message b -> [Property] -> String -> LiveVDom
 buttonWith f props text = (flip addProps) props $ addEvent (JSClick . void $ runMessages f) $ 
-  LiveVNode [] "button" [Property "type" $ JSPText "button"] S.empty
+  LiveVNode [] "button" [Property "type" $ JSPText "button"] $ S.fromList [LiveVText [] $ return text]
 
 -- | A textbox with type="text" that updates the given address with the
 -- current value of the textbox each time the textbox is updated
@@ -101,7 +101,7 @@ selectListWith buildDisplay kvMap = selectList displayMap
 
 
 option :: Bool -> String -> LiveVDom
-option selected opt = LiveVNode [] "option" (if selected then [Property "selected" $ JSPBool True] else []) S.empty
+option selected opt = LiveVNode [] "option" ((if selected then ((Property "selected" $ JSPBool True):) else id) $ [Property "value" $ JSPText $ pack opt]) $ S.fromList [LiveVText [] $ return opt]
 
 
 forEach :: STMMailbox (S.Seq a) -- ^ Values to map over
