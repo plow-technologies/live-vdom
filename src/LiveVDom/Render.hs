@@ -34,7 +34,8 @@ import           Control.Concurrent.STM.Notify
 
 import           LiveVDom.Types hiding (LiveVDom)
 import           LiveVDom.UserTypes
-
+import GHCJS.VDOM.Element
+import GHCJS.Foreign.Callback
 
 -- | Run dom (not forked) forever. This receives the current dom
 -- and then renders it again each time it changes
@@ -44,10 +45,11 @@ runDomI :: DOMNode -- ^ Container to render the dom in
         -> IO ()
 runDomI container postRun envLD = do
   vdm <- recvIO envLD
-  vn' <- renderDom container emptyDiv vdm          -- Render the initial dom
+  vmount <- mount container $ div () ()
+  vn' <- renderDom vmount vdm          -- Render the initial dom
   _ <- atAnimationFrame postRun
-  foldOnChangeWith waitForDom envLD (renderDom container) vn'    -- pass the rendered dom into the fold that
-                                                   -- renders the dom when it changes
+  foldOnChangeWith waitForDom envLD (\_ v -> renderDom vmount v) vn'    -- pass the rendered dom into the fold that
+                                                              -- renders the dom when it changes
 
 -- | Run the dom inside a container that
 runDom :: DOMNode
@@ -59,17 +61,17 @@ runDom c fi e = runDomI c fi $ return e
 
 -- | Given a container, the last rendering, and a current rendering,
 -- diff the new rendering from the old and return the new model of the dom
-renderDom :: DOMNode -> VNode -> LiveVDom -> IO VNode
-renderDom container old ld = do
+renderDom :: VMount -> LiveVDom -> IO ()
+renderDom mount ld = do
   let vna = toProducer ld
   vnaL <- recvIO vna
   vna' <- if S.length vnaL > 1
     then fail "Having more than one node as the parent is illegal"
     else return $ S.index vnaL 0
   new <- toVNode vna'
-  let pa = diff old new
-  redraw container pa
-  return new
+  pa <- diff mount new
+  patch mount pa
+  return ()
 
 
 -- | create an empty div to run dom inside of and add it to the
@@ -81,14 +83,14 @@ createContainer = do
   return container
 
 -- | Redraw the dom using a patch
-redraw :: DOMNode -> Patch -> IO ()
-redraw node pa = pa `seq` atAnimationFrame (patch node pa)
+redraw :: VMount -> Patch -> IO ()
+redraw node pa = pa `seq` atAnimationFrame (void $ patch node pa)
 
 -- | Use the window requestAnimation frame
 -- to run some IO action when able to
 atAnimationFrame :: IO () -> IO ()
 atAnimationFrame m = do
-  cb <- syncCallback NeverRetain False m
+  cb <- syncCallback ContinueAsync m
   [js_| window.requestAnimationFrame(`cb); |]
 
 

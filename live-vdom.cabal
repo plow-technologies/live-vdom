@@ -28,8 +28,7 @@ Library
                       , containers
                       , ghcjs-vdom
                       , ghcjs-ffiqq
-                      , ghcjs-base
-                      , ghcjs-canvas
+                      , ghcjs-base >= 0.2.0.0
                       , text
                       , safe
                       , stm
