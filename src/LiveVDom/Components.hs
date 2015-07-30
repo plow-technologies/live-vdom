@@ -105,9 +105,9 @@ option :: Bool -> String -> LiveVDom
 option selected opt = LiveVNode [] "option" ((if selected then ((Property "selected" $ JSPBool True):) else id) $ [Property "value" $ JSPText $ pack opt]) $ S.fromList [LiveVText [] $ return opt]
 
 
-forEach :: STMMailbox (S.Seq a) -- ^ Values to map over
+forEach :: Mailbox (S.Seq a) -- ^ Values to map over
           -> (a -> (Maybe a -> Message ()) -> LiveVDom) -- ^ Function to generate dom given an element and a function to change the current value
-          -> STMEnvelope (S.Seq (LiveVDom))     
+          -> Envelope (S.Seq (LiveVDom))     
 forEach mb func = (fmap buildDom) <$> withIndices
   where withIndices = S.zip <$> stmIndexList <*> env
         stmIndexList = (increasingSeq . S.length) <$> env
@@ -121,10 +121,10 @@ forEach mb func = (fmap buildDom) <$> withIndices
         appendL (xs,_) = xs
 
 -- | A little wrapper around the applicative instance
--- on STMEnvelope but allows for updating the current value
+-- on Envelope but allows for updating the current value
 -- as well
-withMailbox :: STMMailbox a
+withMailbox :: Mailbox a
               -> (a -> (a -> Message ()) -> LiveVDom)
-              -> STMEnvelope (LiveVDom)
+              -> Envelope (LiveVDom)
 withMailbox mb@(env, _) buildFunc = buildDom <$> env
   where buildDom value = buildFunc value (\newValue -> modifyMailbox mb (const newValue))

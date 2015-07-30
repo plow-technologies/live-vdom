@@ -26,13 +26,13 @@ newtype Message a = Message { unMessage :: IO a }
 runMessages :: Message a -> IO a
 runMessages = unMessage
 
-recvMessage :: STMEnvelope a -> Message a
+recvMessage :: Envelope a -> Message a
 recvMessage = Message . recvIO
 
 sendMessage :: Address a -> a -> Message ()
 sendMessage addr m = Message $ sendIO addr m
 
-modifyMailbox :: STMMailbox a -> (a -> a)-> Message ()
+modifyMailbox :: Mailbox a -> (a -> a)-> Message ()
 modifyMailbox (env, addr) f = do
   tg <- recvMessage env
   sendMessage addr $ f tg
@@ -40,7 +40,7 @@ modifyMailbox (env, addr) f = do
 debug :: String -> Message ()
 debug = Message . putStrLn
 
-asyncIO :: IO a -> Message (STMEnvelope (Maybe a))
+asyncIO :: IO a -> Message (Envelope (Maybe a))
 asyncIO action = 
   Message $ do
     (resultEnvelope, resultAddress) <- spawnIO Nothing

@@ -40,7 +40,7 @@ import           LiveVDom.UserTypes
 -- and then renders it again each time it changes
 runDomI :: DOMNode -- ^ Container to render the dom in
         -> IO ()   -- ^ Action to run after the FIRST render
-        -> STMEnvelope LiveVDom -- ^ dom to run and watch for changes
+        -> Envelope LiveVDom -- ^ dom to run and watch for changes
         -> IO ()
 runDomI container postRun envLD = do
   vdm <- recvIO envLD

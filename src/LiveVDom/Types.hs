@@ -8,6 +8,7 @@ module LiveVDom.Types where
 import           Control.Applicative
 import           Control.Concurrent.STM
 import           Control.Concurrent.STM.Notify
+import           Control.Concurrent.MVar
 import           Control.Monad                 hiding (mapM, mapM_, sequence)
 import           Data.Foldable                 (mapM_, toList, traverse_)
 import qualified Data.Sequence                 as S
@@ -24,15 +25,15 @@ import           Data.String
 import           LiveVDom.Adapter.Types
 
 
-instance (IsString a) => IsString (STMEnvelope a) where
+instance (IsString a) => IsString (Envelope a) where
   fromString = return . fromString
 
 -- | Resulting type from the quasiquoted valentine
 data LiveVDom a =
-     LiveVText {liveVTextEvents :: [a], liveVirtualText :: STMEnvelope String } -- ^ Child text with  no tag name, properties, or children
+     LiveVText {liveVTextEvents :: [a], liveVirtualText :: Envelope String } -- ^ Child text with  no tag name, properties, or children
    | LiveVNode {liveVNodeEvents :: [a], liveVNodeTagName :: TagName, liveVNodePropsList :: [Property], liveVNodeChildren :: (S.Seq (LiveVDom a))} -- ^ Basic tree structor for a node with children and properties
-   | LiveChild {liveVChildEvents :: [a], liveVChild :: STMEnvelope (LiveVDom a)} -- ^ DOM that can change
-   | LiveChildren {liveVChildEvents :: [a], liveVChildren :: STMEnvelope (S.Seq (LiveVDom a))} -- ^ A child that can change
+   | LiveChild {liveVChildEvents :: [a], liveVChild :: Envelope (LiveVDom a)} -- ^ DOM that can change
+   | LiveChildren {liveVChildEvents :: [a], liveVChildren :: Envelope (S.Seq (LiveVDom a))} -- ^ A child that can change
 
 
 -- | Type that valentine is parsed into
@@ -70,7 +71,7 @@ toLiveVDomTH (PLiveInterpText t) = return $ AppE (AppE (ConE 'LiveVText) (ListE 
 
 
 -- | Transform LiveDom to VNode so that it can be processed
-toProducer :: LiveVDom JSEvent -> STMEnvelope (S.Seq VNodeAdapter)
+toProducer :: LiveVDom JSEvent -> Envelope (S.Seq VNodeAdapter)
 toProducer (LiveVText ev t) = (\text -> S.singleton $ VText ev text) <$> t
 toProducer (LiveVNode ev tn pl ch) = do
   ch' <- traverse toProducer ch
@@ -101,22 +102,20 @@ addProps (LiveVNode evs tn pl ch) pl' = LiveVNode evs tn (pl ++ pl') ch
 addProps l _ = l
 
 -- | add a dom listener to a a given node and all children of that node
-addDomListener :: TMVar () -> LiveVDom a -> STM ()
-addDomListener tm (LiveVText _ t) = addListener t tm
-addDomListener tm (LiveVNode _ _ _ ch) = traverse_ (addDomListener tm) ch
-addDomListener tm (LiveChild _ vch) = (addListener vch tm) >>
-                                            (addDomListener tm =<< recv vch)
-addDomListener tm (LiveChildren _ vchs) = do
-  addListener vchs tm
-  xs <- recv vchs
-  mapM_ (addDomListener tm) xs
+addDomListener :: MVar () -> LiveVDom a -> IO ()
+addDomListener mv (LiveVText _ t) = addListener t mv
+addDomListener mv (LiveVNode _ _ _ ch) = traverse_ (addDomListener mv) ch
+addDomListener mv (LiveChild _ vch) = (addListener vch mv) >>
+                                            (addDomListener mv =<< recvIO vch)
+addDomListener mv (LiveChildren _ vchs) = do
+  addListener vchs mv
+  xs <- recvIO vchs
+  mapM_ (addDomListener mv) xs
 
-waitForDom :: STMEnvelope (LiveVDom a) -> IO ()
+waitForDom :: Envelope (LiveVDom a) -> IO ()
 waitForDom envDom = do
   dom <- recvIO envDom
-  listener <- atomically $ do
-    listen <- newEmptyTMVar
-    addListener envDom listen
-    addDomListener listen dom
-    return listen
-  atomically $ readTMVar listener
+  listen <- newEmptyMVar
+  addListener envDom listen
+  addDomListener listen dom
+  readMVar listen
