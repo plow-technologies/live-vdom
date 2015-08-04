@@ -1,5 +1,6 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# LANGUAGE  QuasiQuotes #-}
+{-# LANGUAGE OverloadedStrings #-}
 module LiveVDom.Adapter where
 
 import           Control.Applicative
@@ -22,6 +23,9 @@ import GHCJS.VDOM.Unsafe
 import GHCJS.VDOM.Attribute
 import Unsafe.Coerce
 import GHCJS.Marshal.Pure
+import qualified GHCJS.Prim.Internal.Build as IB
+import Data.Bifunctor
+import qualified  JavaScript.Object.Internal as JSOI
 
 -- | The orphan instance is to seperate the GHCJS dependency
 --   from the JSProp definition
@@ -95,32 +99,46 @@ buildProperties :: [Property] -> [Attribute]
 buildProperties = fmap buildProperty
 
 buildProperty :: Property -> Attribute
--- buildProperty (Property name (JSPBool b)) = Attribute (JSTR.pack name) $ castRef $ pToJSRef b
--- buildProperty (Property name (JSPText t)) = Attribute (JSTR.pack name) $ castRef $ pToJSRef t
--- buildProperty (Property name (JSPInt i)) = Attribute (JSTR.pack name) $ castRef $ pToJSRef i
--- buildProperty (Property name (JSPFloat f)) = Attribute (JSTR.pack name) $ castRef $ pToJSRef f
--- buildProperty (Property name (JSPDouble d)) = Attribute (JSTR.pack name) $ castRef $ pToJSRef d
-buildProperty = undefined
+buildProperty (Property name (JSPBool b)) = Attribute (JSTR.pack name) (pCastToJSRef b)
+buildProperty (Property name (JSPText t)) = Attribute (JSTR.pack name) (pCastToJSRef t)
+buildProperty (Property name (JSPInt i)) = Attribute (JSTR.pack name) (pCastToJSRef i)
+buildProperty (Property name (JSPFloat f)) = Attribute (JSTR.pack name) (pCastToJSRef f)
+buildProperty (Property name (JSPDouble d)) = Attribute (JSTR.pack name) (pCastToJSRef d)
+
+
+pCastToJSRef :: PToJSRef a => a -> JSRef ()
+pCastToJSRef = castRef . pToJSRef
 
 buildEvents :: [JSEvent] -> [Attribute]
 buildEvents = fmap buildEvent
 
 buildEvent :: JSEvent -> Attribute
-buildEvent (JSInput f) = EV.keypress $ \ev -> f =<< getCurrentValue (unsafeCoerce ev)
-buildEvent (JSKeypress f) = EV.keypress $ \ev -> f =<< getCurrentValue (unsafeCoerce ev)
+buildEvent (JSInput f) = EV.keypress $ \ev -> do
+  mVal <- getCurrentValue (unsafeCoerce ev)
+  case mVal of
+    (Just v) -> f v
+    Nothing -> return ()
+buildEvent (JSKeypress f) = EV.keypress $ \ev -> do
+  mVal <- getCurrentValue (unsafeCoerce ev)
+  case mVal of
+    (Just v) -> f v
+    Nothing -> return ()
 buildEvent (JSClick f) = EV.click (const f)
 buildEvent (JSDoubleClick f) = EV.dblclick (const f)
 buildEvent (JSCanvasLoad f) = canvasLoad f
 
 
-getCurrentValue :: (FromJSRef b) => JSRef a -> IO b
-getCurrentValue x = getValue =<< getTarget x
+getCurrentValue :: (FromJSRef b) => JSRef a -> IO (Maybe b)
+getCurrentValue = getValue <=< getTarget
+
+unObject :: JSOI.Object -> (JSRef ())
+unObject (JSOI.Object x) = x
 
 getTarget :: JSRef a -> IO (JSRef b)
-getTarget = undefined
+getTarget ref = JSO.unsafeGetProp "target" (JSOI.Object $ castRef ref)
 
-getValue :: (FromJSRef b) => JSRef a -> IO b
-getValue = undefined
+getValue :: (FromJSRef b) => JSRef a -> IO (Maybe b)
+getValue ref = fromJSRef =<< JSO.unsafeGetProp "target" (JSOI.Object $ castRef ref)
 
 canvasLoad :: (JSRef a -> IO ()) -> Attribute
 canvasLoad = undefined 

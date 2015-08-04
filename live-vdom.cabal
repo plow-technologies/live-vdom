@@ -35,6 +35,7 @@ Library
                       , stm-notify >= 0.2
                       , here
                       , th-lift-instances
+                      , ghcjs-prim
 
 Source-Repository head
   Type:                 git

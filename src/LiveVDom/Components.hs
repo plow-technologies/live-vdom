@@ -9,6 +9,7 @@ module LiveVDom.Components
   , numberBoxWith
   , selectList
   , selectListWith
+  , forEach
   ) where
 
 import           Control.Concurrent.STM.Notify
