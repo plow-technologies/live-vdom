@@ -10,6 +10,7 @@ module LiveVDom.Components
   , selectList
   , selectListWith
   , forEach
+  , forEach'
   ) where
 
 import           Control.Concurrent.STM.Notify
