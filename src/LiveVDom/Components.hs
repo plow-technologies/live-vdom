@@ -29,7 +29,7 @@ import           Data.Text (pack)
 import           Text.Read
 import qualified Data.Map as Map
 import qualified Data.Sequence as S
-
+import qualified Data.Traversable as T
 
 -- class HasBox a where
 --   box :: Address (Event a) -> [Property] -> Maybe a -> LiveVDom JSEvent
@@ -109,6 +109,22 @@ forEach :: STMMailbox (S.Seq a) -- ^ Values to map over
           -> (a -> (Maybe a -> Message ()) -> LiveVDom) -- ^ Function to generate dom given an element and a function to change the current value
           -> STMEnvelope (S.Seq (LiveVDom))     
 forEach mb func = (fmap buildDom) <$> withIndices
+  where withIndices = S.zip <$> stmIndexList <*> env
+        stmIndexList = (increasingSeq . S.length) <$> env
+        increasingSeq = S.fromList . ((flip take) [0,1..])
+        buildDom (i, val) = func val (updateValue i)
+        updateValue i (Just newVal) = modifyMailbox mb (S.update i newVal)
+        updateValue i _ = modifyMailbox mb (remove i)
+        env = fst mb
+        remove i ts = appendL  $ S.viewl <$> S.splitAt i ts
+        appendL (xs,(_ S.:< ys)) = xs S.>< ys
+        appendL (xs,_) = xs
+
+
+forEach' :: STMMailbox (S.Seq a) -- ^ Values to map over
+          -> (a -> (Maybe a -> Message ()) -> STMEnvelope LiveVDom) -- ^ Function to generate dom given an element and a function to change the current value
+          -> STMEnvelope (S.Seq LiveVDom)    
+forEach' mb func = join $ T.sequence <$> (fmap buildDom) <$> withIndices
   where withIndices = S.zip <$> stmIndexList <*> env
         stmIndexList = (increasingSeq . S.length) <$> env
         increasingSeq = S.fromList . ((flip take) [0,1..])
