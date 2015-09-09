@@ -37,7 +37,7 @@ data JSEvent = JSInput (String -> IO ())
              | JSKeypress (String -> IO ())
              | JSClick (IO ())
              | JSDoubleClick (IO ())
-             | forall a. JSCanvasLoad (JSRef a -> IO ())
+             | JSCanvasLoad (JSRef -> IO ())
 
 
 -- | Intermediary type between ghcjs and haskell

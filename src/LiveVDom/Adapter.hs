@@ -41,8 +41,8 @@ instance ToJSRef JSProp where
 
 
 -- | Push a piece of data into a JSRef and cast it
-castToJSRef :: ToJSRef a => a -> IO (JSRef b)
-castToJSRef x = castRef <$> toJSRef x
+castToJSRef :: ToJSRef a => a -> IO (JSRef)
+castToJSRef x = toJSRef x
 
 
 
@@ -58,7 +58,7 @@ instance ToJSRef PropList where
     foldM_ insert attr xs 
     props@(JSO.Object propsO) <- JSO.create
     JSO.setProp (JSTR.pack "attributes") attrO props
-    return $ castRef propsO
+    return $ propsO
     where
       -- VDom uses the property object like a Map from name to value
       -- So we create a map for vdom to access
@@ -75,7 +75,7 @@ toVNode (VNode events aTagName aProps aChildren) = do
   let evs = buildEvents events
       attrs = buildProperties aProps
       attrList = evs ++ attrs
-  -- props <- unsafeToAttributes . castRef <$> (toJSRef $ PropList aProps)
+
   children <- TR.mapM toVNode aChildren
   return $ E.custom tagName attrList $ mChildren children
   where tagName = JSTR.pack aTagName
@@ -99,15 +99,15 @@ buildProperties :: [Property] -> [Attribute]
 buildProperties = fmap buildProperty
 
 buildProperty :: Property -> Attribute
-buildProperty (Property name (JSPBool b)) = Attribute (JSTR.pack name) (pCastToJSRef b)
-buildProperty (Property name (JSPText t)) = Attribute (JSTR.pack name) (pCastToJSRef t)
-buildProperty (Property name (JSPInt i)) = Attribute (JSTR.pack name) (pCastToJSRef i)
-buildProperty (Property name (JSPFloat f)) = Attribute (JSTR.pack name) (pCastToJSRef f)
-buildProperty (Property name (JSPDouble d)) = Attribute (JSTR.pack name) (pCastToJSRef d)
+buildProperty (Property name (JSPBool b)) = mkAttribute (JSTR.pack name) (pCastToJSRef b)
+buildProperty (Property name (JSPText t)) = mkAttribute (JSTR.pack name) (pCastToJSRef t)
+buildProperty (Property name (JSPInt i)) = mkAttribute (JSTR.pack name) (pCastToJSRef i)
+buildProperty (Property name (JSPFloat f)) = mkAttribute (JSTR.pack name) (pCastToJSRef f)
+buildProperty (Property name (JSPDouble d)) = mkAttribute (JSTR.pack name) (pCastToJSRef d)
 
 
-pCastToJSRef :: PToJSRef a => a -> JSRef ()
-pCastToJSRef = castRef . pToJSRef
+pCastToJSRef :: PToJSRef a => a -> JSRef
+pCastToJSRef = pToJSRef
 
 buildEvents :: [JSEvent] -> [Attribute]
 buildEvents = fmap buildEvent
@@ -128,17 +128,17 @@ buildEvent (JSDoubleClick f) = EV.dblclick (const f)
 buildEvent (JSCanvasLoad f) = canvasLoad f
 
 
-getCurrentValue :: (FromJSRef b) => JSRef a -> IO (Maybe b)
+getCurrentValue :: (FromJSRef b) => JSRef -> IO (Maybe b)
 getCurrentValue = getValue <=< getTarget
 
-unObject :: JSOI.Object -> (JSRef ())
+unObject :: JSOI.Object -> JSRef
 unObject (JSOI.Object x) = x
 
-getTarget :: JSRef a -> IO (JSRef b)
-getTarget ref = JSO.unsafeGetProp "target" (JSOI.Object $ castRef ref)
+getTarget :: JSRef -> IO (JSRef)
+getTarget ref = JSO.unsafeGetProp "target" (JSOI.Object ref)
 
-getValue :: (FromJSRef b) => JSRef a -> IO (Maybe b)
-getValue ref = fromJSRef =<< JSO.unsafeGetProp "target" (JSOI.Object $ castRef ref)
+getValue :: (FromJSRef b) => JSRef -> IO (Maybe b)
+getValue ref = fromJSRef =<< JSO.unsafeGetProp "target" (JSOI.Object ref)
 
-canvasLoad :: (JSRef a -> IO ()) -> Attribute
+canvasLoad :: (JSRef -> IO ()) -> Attribute
 canvasLoad = undefined 

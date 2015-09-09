@@ -1,0 +1,15 @@
+[submodule "non-hackage-dependencies/ghcjs-canvas"]
+	path = non-hackage-dependencies/ghcjs-canvas
+	url = https://github.com/ghcjs/ghcjs-canvas.git
+[submodule "non-hackage-dependencies/ghcjs-base"]
+	path = non-hackage-dependencies/ghcjs-base
+	url = https://github.com/ghcjs/ghcjs-base.git
+[submodule "non-hackage-dependencies/ghcjs-ffiqq"]
+	path = non-hackage-dependencies/ghcjs-ffiqq
+	url = https://github.com/ghcjs/ghcjs-ffiqq.git
+[submodule "non-hackage-dependencies/stm-notify"]
+	path = non-hackage-dependencies/stm-notify
+	url = git@github.com:plow-technologies/stm-notify.git
+[submodule "non-hackage-dependencies/ghcjs-vdom"]
+	path = non-hackage-dependencies/ghcjs-vdom
+	url = https://github.com/plow-technologies/ghcjs-vdom.git

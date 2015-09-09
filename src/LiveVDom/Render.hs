@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes       #-}
+{-# LANGUAGE PartialTypeSignatures #-}
 
 {-
   Straight stolt on from virtual-dom
@@ -34,8 +35,9 @@ import           Control.Concurrent.STM.Notify
 
 import           LiveVDom.Types hiding (LiveVDom)
 import           LiveVDom.UserTypes
-import GHCJS.VDOM.Element
-import GHCJS.Foreign.Callback
+import           GHCJS.VDOM.Element
+import           GHCJS.Foreign.Callback
+import           JavaScript.Web.AnimationFrame (inAnimationFrame)
 
 -- | Run dom (not forked) forever. This receives the current dom
 -- and then renders it again each time it changes
@@ -47,7 +49,7 @@ runDomI container postRun envLD = do
   vdm <- recvIO envLD
   vmount <- mount container $ div () ()
   vn' <- renderDom vmount vdm          -- Render the initial dom
-  _ <- atAnimationFrame postRun
+  _ <- inAnimationFrame ContinueAsync postRun
   foldOnChangeWith waitForDom envLD (\_ v -> renderDom vmount v) vn'    -- pass the rendered dom into the fold that
                                                               -- renders the dom when it changes
 
@@ -81,16 +83,5 @@ createContainer = do
   container <- [js| document.createElement('div') |] :: IO DOMNode
   [js_| document.body.appendChild(`container); |] :: IO ()
   return container
-
--- | Redraw the dom using a patch
-redraw :: VMount -> Patch -> IO ()
-redraw node pa = pa `seq` atAnimationFrame (void $ patch node pa)
-
--- | Use the window requestAnimation frame
--- to run some IO action when able to
-atAnimationFrame :: IO () -> IO ()
-atAnimationFrame m = do
-  cb <- syncCallback ContinueAsync m
-  [js_| window.requestAnimationFrame(`cb); |]
 
 
