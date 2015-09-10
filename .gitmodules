@@ -1,6 +1,3 @@
-[submodule "non-hackage-dependencies/ghcjs-canvas"]
-	path = non-hackage-dependencies/ghcjs-canvas
-	url = https://github.com/ghcjs/ghcjs-canvas.git
 [submodule "non-hackage-dependencies/ghcjs-base"]
 	path = non-hackage-dependencies/ghcjs-base
 	url = https://github.com/ghcjs/ghcjs-base.git
