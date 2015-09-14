@@ -10,6 +10,7 @@ module LiveVDom.Components
   , selectList
   , selectListWith
   , forEach
+  , forEach'
   ) where
 
 import           Control.Concurrent.STM.Notify
@@ -25,10 +26,11 @@ import           Control.Applicative
 import           LiveVDom.Message
 import           Control.Monad
 import           Data.Traversable
-import           Data.Text (pack)
+import           Data.Text (Text, pack)
 import           Text.Read
 import qualified Data.Map as Map
 import qualified Data.Sequence as S
+import qualified Data.Traversable as T
 
 
 -- class HasBox a where
@@ -47,7 +49,7 @@ button addr = buttonWith (sendMessage addr $ Fired ())
 -- when the button is pressed
 buttonWith :: Message b -> [Property] -> String -> LiveVDom
 buttonWith f props text = (flip addProps) props $ addEvent (JSClick . void $ runMessages f) $ 
-  LiveVNode [] "button" [Property "type" $ JSPText "button"] S.empty
+  LiveVNode [] "button" [Property "type" $ JSPText "button"] $ S.fromList [LiveVText [] $ return text]
 
 -- | A textbox with type="text" that updates the given address with the
 -- current value of the textbox each time the textbox is updated
@@ -100,15 +102,30 @@ selectListWith :: (Ord k, Eq v) => ((k,v) -> String) -> Map.Map k v -> (v -> Mes
 selectListWith buildDisplay kvMap = selectList displayMap
   where displayMap = Map.fromList $ (\t@(_,v) -> (buildDisplay t, v) ) <$> Map.toList kvMap
 
-
 option :: Bool -> String -> LiveVDom
-option selected opt = LiveVNode [] "option" (if selected then [Property "selected" $ JSPBool True] else []) S.empty
+option selected opt = LiveVNode [] "option" ((if selected then ((Property "selected" $ JSPBool True):) else id) $ [Property "value" $ JSPText $ pack opt]) $ S.fromList [LiveVText [] $ return opt]
 
 
 forEach :: STMMailbox (S.Seq a) -- ^ Values to map over
           -> (a -> (Maybe a -> Message ()) -> LiveVDom) -- ^ Function to generate dom given an element and a function to change the current value
           -> STMEnvelope (S.Seq (LiveVDom))     
 forEach mb func = (fmap buildDom) <$> withIndices
+  where withIndices = S.zip <$> stmIndexList <*> env
+        stmIndexList = (increasingSeq . S.length) <$> env
+        increasingSeq = S.fromList . ((flip take) [0,1..])
+        buildDom (i, val) = func val (updateValue i)
+        updateValue i (Just newVal) = modifyMailbox mb (S.update i newVal)
+        updateValue i _ = modifyMailbox mb (remove i)
+        env = fst mb
+        remove i ts = appendL  $ S.viewl <$> S.splitAt i ts
+        appendL (xs,(_ S.:< ys)) = xs S.>< ys
+        appendL (xs,_) = xs
+
+
+forEach' :: STMMailbox (S.Seq a) -- ^ Values to map over
+          -> (a -> (Maybe a -> Message ()) -> STMEnvelope LiveVDom) -- ^ Function to generate dom given an element and a function to change the current value
+          -> STMEnvelope (S.Seq LiveVDom)    
+forEach' mb func = join $ T.sequence <$> (fmap buildDom) <$> withIndices
   where withIndices = S.zip <$> stmIndexList <*> env
         stmIndexList = (increasingSeq . S.length) <$> env
         increasingSeq = S.fromList . ((flip take) [0,1..])
