@@ -35,6 +35,7 @@ import           Control.Concurrent.STM.Notify
 
 import           LiveVDom.Types hiding (LiveVDom)
 import           LiveVDom.UserTypes
+import qualified GHCJS.VDOM.Event as EV
 import           GHCJS.VDOM.Element
 import           GHCJS.Foreign.Callback
 import           JavaScript.Web.AnimationFrame (inAnimationFrame)
@@ -46,6 +47,7 @@ runDomI :: DOMNode -- ^ Container to render the dom in
         -> STMEnvelope LiveVDom -- ^ dom to run and watch for changes
         -> IO ()
 runDomI container postRun envLD = do
+  EV.initEventDelegation EV.defaultEvents -- need this for events to work
   vdm <- recvIO envLD
   vmount <- mount container $ div () ()
   vn' <- renderDom vmount vdm          -- Render the initial dom
