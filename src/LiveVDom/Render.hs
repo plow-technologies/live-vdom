@@ -30,7 +30,7 @@ import           GHCJS.VDOM
 
 import           LiveVDom.Adapter
 import qualified LiveVDom.Adapter.Types                          as VDA
-
+import           Control.Concurrent
 import           Control.Concurrent.STM.Notify
 
 import           LiveVDom.Types hiding (LiveVDom)
@@ -38,6 +38,8 @@ import           LiveVDom.UserTypes
 import           GHCJS.VDOM.Element
 import           GHCJS.Foreign.Callback
 import           JavaScript.Web.AnimationFrame (inAnimationFrame)
+import qualified GHCJS.VDOM.Event as EV
+
 
 -- | Run dom (not forked) forever. This receives the current dom
 -- and then renders it again each time it changes
@@ -46,6 +48,7 @@ runDomI :: DOMNode -- ^ Container to render the dom in
         -> STMEnvelope LiveVDom -- ^ dom to run and watch for changes
         -> IO ()
 runDomI container postRun envLD = do
+  EV.initEventDelegation EV.defaultEvents
   vdm <- recvIO envLD
   vmount <- mount container $ div () ()
   vn' <- renderDom vmount vdm          -- Render the initial dom
@@ -60,7 +63,6 @@ runDom :: DOMNode
       -> IO ()
 runDom c fi e = runDomI c fi $ return e
 
-
 -- | Given a container, the last rendering, and a current rendering,
 -- diff the new rendering from the old and return the new model of the dom
 renderDom :: VMount -> LiveVDom -> IO ()
@@ -72,6 +74,7 @@ renderDom mount ld = do
     else return $ S.index vnaL 0
   new <- toVNode vna'
   pa <- diff mount new
+  -- redraw container pa
   patch mount pa
   return ()
 

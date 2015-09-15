@@ -33,11 +33,11 @@ import qualified  JavaScript.Object.Internal as JSOI
 --   it back to the correct type so that
 --   toJSRef :: JSProp -> IO (JSRef JSProp)
 instance ToJSRef JSProp where
-  toJSRef (JSPText t) = castToJSRef t
-  toJSRef (JSPBool b) = castToJSRef b
-  toJSRef (JSPInt i) = castToJSRef i
-  toJSRef (JSPFloat f) = castToJSRef f
-  toJSRef (JSPDouble d) = castToJSRef d
+  toJSRef (JSPText t) = toJSRef t
+  toJSRef (JSPBool b) = toJSRef b
+  toJSRef (JSPInt i) = toJSRef i
+  toJSRef (JSPFloat f) = toJSRef f
+  toJSRef (JSPDouble d) = toJSRef d
 
 
 -- | Push a piece of data into a JSRef and cast it
@@ -75,24 +75,12 @@ toVNode (VNode events aTagName aProps aChildren) = do
   let evs = buildEvents events
       attrs = buildProperties aProps
       attrList = evs ++ attrs
-
+  print "toVNode"
   children <- TR.mapM toVNode aChildren
   return $ E.custom tagName attrList $ mChildren children
   where tagName = JSTR.pack aTagName
         mChildren xs = mkChildren xs
 toVNode (VText _ev inner) = return $ E.text $ JSTR.pack inner
-
-
--- | Add a list of events to a list of properties
---   that can be added to a dom object
--- addEvents :: [JSEvent] -> Attributes' -> IO VD.Attributes'
--- addEvents events props = foldM addEvent props events
---   where addEvent pl (JSInput f)  = EV.keypress f pl
---         addEvent pl (JSKeypress f) = EV.keypress f pl
---         addEvent pl (JSClick f) = (\cb -> EV.click cb pl) <$> (mkCallback f)
---         addEvent pl (JSDoubleClick f) = (\cb -> EV.dblclick cb pl) <$> (mkCallback f)
---         addEvent pl (JSCanvasLoad f) = canvasLoad f pl
---         mkCallback = syncCallback ContinueAsync
 
 
 buildProperties :: [Property] -> [Attribute]
@@ -126,7 +114,6 @@ buildEvent (JSKeypress f) = EV.keypress $ \ev -> do
 buildEvent (JSClick f) = EV.click (const f)
 buildEvent (JSDoubleClick f) = EV.dblclick (const f)
 buildEvent (JSCanvasLoad f) = canvasLoad f
-
 
 getCurrentValue :: (FromJSRef b) => JSRef -> IO (Maybe b)
 getCurrentValue = getValue <=< getTarget
