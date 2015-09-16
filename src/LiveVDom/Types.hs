@@ -102,23 +102,20 @@ addProps l _ = l
 
 
 -- | add a dom listener to a a given node and all children of that node
-addDomListener :: TMVar () -> LiveVDom a -> STM ()
-addDomListener tm (LiveVText _ t) = addListener t tm
+addDomListener :: TMVar () -> LiveVDom a -> IO ()
+addDomListener tm (LiveVText _ t) = atomically $ addListener t tm
 addDomListener tm (LiveVNode _ _ _ ch) = traverse_ (addDomListener tm) ch
-addDomListener tm (LiveChild _ vch) = (addListener vch tm) >>
-                                            (addDomListener tm =<< recv vch)
+addDomListener tm (LiveChild _ vch) = (atomically $ addListener vch tm) >>
+                                            (addDomListener tm =<< recvIO vch)
 addDomListener tm (LiveChildren _ vchs) = do
-  addListener vchs tm
-  xs <- recv vchs
+  atomically $ addListener vchs tm
+  xs <- recvIO vchs
   mapM_ (addDomListener tm) xs
-
 
 waitForDom :: STMEnvelope (LiveVDom a) -> IO ()
 waitForDom envDom = do
   dom <- recvIO envDom
-  listener <- atomically $ do
-    listen <- newEmptyTMVar
-    addListener envDom listen
-    addDomListener listen dom
-    return listen
+  listener <- newEmptyTMVarIO
+  atomically $ addListener envDom $ listener
+  addDomListener listener dom
   atomically $ readTMVar listener

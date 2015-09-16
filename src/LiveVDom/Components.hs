@@ -54,7 +54,7 @@ buttonWith f props text = (flip addProps) props $ addEvent (JSClick . void $ run
 -- | A textbox with type="text" that updates the given address with the
 -- current value of the textbox each time the textbox is updated
 textBox :: Address (Event String) -> [Property] -> Maybe String -> LiveVDom
-textBox addr = textBoxWith (\str -> sendMessage addr $ Fired str) --addEvent (JSInput $ \str -> void $ sendIO addr $ Fired str) tb
+textBox addr = textBoxWith (\str -> sendMessage addr $ Fired str) 
 
 -- | The same as a textbox with string but it parses the string to a number and
 -- has type="numberBox"
@@ -90,7 +90,7 @@ selectList :: (Eq v)
            -> LiveVDom
 selectList kvMap messageFunc props mSelected = 
     (flip addProps) props
-  $ addEvent (JSInput $ \str -> runMessages $ lookupKey str)
+  $ addEvents [ (JSInput $ \str -> runMessages $ lookupKey str), (JSKeydown $ \str -> runMessages $ lookupKey str)]
   $ LiveVNode [] "select" []
   $ fmap (\(k,v) -> option (Just v == mSelected) k) (S.fromList $ Map.toList kvMap)
   where lookupKey s = case Map.lookup s kvMap of

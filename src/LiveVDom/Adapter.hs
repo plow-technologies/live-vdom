@@ -4,6 +4,7 @@
 module LiveVDom.Adapter where
 
 import           Control.Applicative
+import           Control.Concurrent
 import           Control.Monad
 import qualified Data.Traversable    as TR
 
@@ -39,16 +40,8 @@ instance ToJSRef JSProp where
   toJSRef (JSPFloat f) = toJSRef f
   toJSRef (JSPDouble d) = toJSRef d
 
-
--- | Push a piece of data into a JSRef and cast it
-castToJSRef :: ToJSRef a => a -> IO (JSRef)
-castToJSRef x = toJSRef x
-
-
-
 -- | Newtype to wrap the [Property] so that
 newtype PropList = PropList { unPropList :: [Property]} deriving (Show)
-
 
 -- | The orphan instance is again to seperate the GHCJS dependency
 --   from the definition of property
@@ -75,7 +68,6 @@ toVNode (VNode events aTagName aProps aChildren) = do
   let evs = buildEvents events
       attrs = buildProperties aProps
       attrList = evs ++ attrs
-  print "toVNode"
   children <- TR.mapM toVNode aChildren
   return $ E.custom tagName attrList $ mChildren children
   where tagName = JSTR.pack aTagName
@@ -100,13 +92,27 @@ pCastToJSRef = pToJSRef
 buildEvents :: [JSEvent] -> [Attribute]
 buildEvents = fmap buildEvent
 
+{- BUG - buildEvent
+  looks like there is delay from when the event gets called and when the variable gets passed to the event
+  if you add a threadDelay it causes some lag but the variable is passed. If there is no delay then the
+  variable will not make it until the next event
+-}
+
 buildEvent :: JSEvent -> Attribute
-buildEvent (JSInput f) = EV.keypress $ \ev -> do
+buildEvent x@(JSInput f) = EV.change $ \ev -> do
+  threadDelay 1
+  mVal <- getCurrentValue (unsafeCoerce ev)
+  case mVal of
+    (Just v) -> f v
+    Nothing -> return ()
+buildEvent x@(JSKeydown f) = EV.keydown $ \ev -> do
+  threadDelay 1
   mVal <- getCurrentValue (unsafeCoerce ev)
   case mVal of
     (Just v) -> f v
     Nothing -> return ()
 buildEvent (JSKeypress f) = EV.keypress $ \ev -> do
+  threadDelay 1
   mVal <- getCurrentValue (unsafeCoerce ev)
   case mVal of
     (Just v) -> f v
@@ -115,17 +121,16 @@ buildEvent (JSClick f) = EV.click (const f)
 buildEvent (JSDoubleClick f) = EV.dblclick (const f)
 buildEvent (JSCanvasLoad f) = canvasLoad f
 
+
 getCurrentValue :: (FromJSRef b) => JSRef -> IO (Maybe b)
 getCurrentValue = getValue <=< getTarget
 
-unObject :: JSOI.Object -> JSRef
-unObject (JSOI.Object x) = x
+getValue :: (FromJSRef b) => JSRef -> IO (Maybe b)
+getValue ref = fromJSRef =<< JSO.unsafeGetProp "value" (JSOI.Object ref)
 
 getTarget :: JSRef -> IO (JSRef)
 getTarget ref = JSO.unsafeGetProp "target" (JSOI.Object ref)
 
-getValue :: (FromJSRef b) => JSRef -> IO (Maybe b)
-getValue ref = fromJSRef =<< JSO.unsafeGetProp "target" (JSOI.Object ref)
-
 canvasLoad :: (JSRef -> IO ()) -> Attribute
 canvasLoad = undefined 
+

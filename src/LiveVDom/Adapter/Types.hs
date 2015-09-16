@@ -33,11 +33,12 @@ instance Lift Property where
 type TagName = String
 
 
-data JSEvent = JSInput (String -> IO ())
-             | JSKeypress (String -> IO ())
-             | JSClick (IO ())
+data JSEvent = JSInput       (String -> IO ())
+             | JSKeydown     (String -> IO ())
+             | JSKeypress    (String -> IO ())
+             | JSClick       (IO ())
              | JSDoubleClick (IO ())
-             | JSCanvasLoad (JSRef -> IO ())
+             | JSCanvasLoad  (JSRef  -> IO ())
 
 
 -- | Intermediary type between ghcjs and haskell
