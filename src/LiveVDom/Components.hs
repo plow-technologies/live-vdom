@@ -7,6 +7,7 @@ module LiveVDom.Components
   , inputSubmitWith
   , textBox
   , textBoxWith
+  , passwordBoxWith
   , textAreaWith
   , formWith
   , linkWith
@@ -92,6 +93,14 @@ textBoxWith f props mStr = (flip addProps) props $ addEvent (JSKeypress $ \str -
     tb = LiveVNode [] "input" 
                    (maybe id ((:) . Property "value" . JSPText . pack) mStr
                      [Property "type" $ JSPText "text"])
+                   S.empty
+
+passwordBoxWith :: (String -> Message b) -> [Property] -> Maybe String -> LiveVDom
+passwordBoxWith f props mStr = (flip addProps) props $ addEvent (JSKeypress $ \str -> void . runMessages $ f str) tb
+  where
+    tb = LiveVNode [] "input" 
+                   (maybe id ((:) . Property "value" . JSPText . pack) mStr
+                     [Property "type" $ JSPText "password"])
                    S.empty
 
 textAreaWith :: (String -> Message b) -> [Property] -> Maybe String -> LiveVDom
