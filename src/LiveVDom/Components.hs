@@ -3,6 +3,8 @@ module LiveVDom.Components
   (
     button
   , buttonWith
+  , label
+  , labelWith
   , textBox
   , textBoxWith
   , numberBox
@@ -33,13 +35,6 @@ import qualified Data.Sequence as S
 import qualified Data.Traversable as T
 
 
--- class HasBox a where
---   box :: Address (Event a) -> [Property] -> Maybe a -> LiveVDom JSEvent
---   boxWith :: (Event a -> Message b) -> [Property] -> LiveVDom JSEvent
-
--- instance HasBox String where
---   box = 
-
 -- | A basic button component with the default of accepting an STM Address
 button :: Address (Event ()) -> [Property] -> String -> LiveVDom
 button addr = buttonWith (sendMessage addr $ Fired ())
@@ -51,10 +46,30 @@ buttonWith :: Message b -> [Property] -> String -> LiveVDom
 buttonWith f props text = (flip addProps) props $ addEvent (JSClick . void $ runMessages f) $ 
   LiveVNode [] "button" [Property "type" $ JSPText "button"] $ S.fromList [LiveVText [] $ return text]
 
+label :: Address (Event String) -> [Property] -> String -> LiveVDom
+label addr = labelWith (\str -> sendMessage addr $ Fired str) 
+
+-- | A label with a click event
+labelWith :: (String -> Message b) -> [Property] -> String -> LiveVDom
+labelWith f props str = (flip addProps) props $ addEvent (JSClickWithId $ \str -> void . runMessages $ f str) l
+  where
+    l = LiveVNode [] "div" [] $ S.fromList [LiveVText [] $ return str]
+
+
 -- | A textbox with type="text" that updates the given address with the
 -- current value of the textbox each time the textbox is updated
 textBox :: Address (Event String) -> [Property] -> Maybe String -> LiveVDom
 textBox addr = textBoxWith (\str -> sendMessage addr $ Fired str) 
+
+-- | A textbox that allows you to send non-blocking messages with the Message
+-- monad whenever the input changes
+textBoxWith :: (String -> Message b) -> [Property] -> Maybe String -> LiveVDom
+textBoxWith f props mStr = (flip addProps) props $ addEvent (JSKeypress $ \str -> void . runMessages $ f str) tb
+  where
+    tb = LiveVNode [] "input" 
+                   (maybe id ((:) . Property "value" . JSPText . pack) mStr
+                     [Property "type" $ JSPText "text"])
+                   S.empty
 
 -- | The same as a textbox with string but it parses the string to a number and
 -- has type="numberBox"
@@ -70,16 +85,6 @@ numberBoxWith f = addEvent (JSInput $ \str -> void . runMessages . f . maybeToEv
   where tb = LiveVNode [] "input" [Property "type" $ JSPText "number"] S.empty
         maybeToEvent (Nothing) = Unfired
         maybeToEvent (Just e) = Fired e
-
--- | A textbox that allows you to send non-blocking messages with the Message
--- monad whenever the input changes
-textBoxWith :: (String -> Message b) -> [Property] -> Maybe String -> LiveVDom
-textBoxWith f props mStr = (flip addProps) props $ addEvent (JSKeypress $ \str -> void . runMessages $ f str) tb
-  where
-    tb = LiveVNode [] "input" 
-                   (maybe id ((:) . Property "value" . JSPText . pack) mStr
-                     [Property "type" $ JSPText "text"])
-                   S.empty
 
 -- | A dropdown list
 selectList :: (Eq v) 

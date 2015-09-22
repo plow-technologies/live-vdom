@@ -99,13 +99,13 @@ buildEvents = fmap buildEvent
 -}
 
 buildEvent :: JSEvent -> Attribute
-buildEvent x@(JSInput f) = EV.change $ \ev -> do
+buildEvent (JSInput f) = EV.change $ \ev -> do
   threadDelay 1
   mVal <- getCurrentValue (unsafeCoerce ev)
   case mVal of
     (Just v) -> f v
     Nothing -> return ()
-buildEvent x@(JSKeydown f) = EV.keydown $ \ev -> do
+buildEvent (JSKeydown f) = EV.keydown $ \ev -> do
   threadDelay 1
   mVal <- getCurrentValue (unsafeCoerce ev)
   case mVal of
@@ -117,16 +117,37 @@ buildEvent (JSKeypress f) = EV.keypress $ \ev -> do
   case mVal of
     (Just v) -> f v
     Nothing -> return ()
+buildEvent (JSClickWithId f) = EV.click $ \ev -> do
+  threadDelay 1
+  -- print <=< fromJSRef =<< getTarget $ unsafeCoerce ev
+  -- x <- getTarget $ unsafeCoerce ev
+  -- print $ fromJSRef x
+  -- print =<< JSOI.listProps (JSOI.Object $ unsafeCoerce ev)
+  mVal <- getCurrentInnerHTML (unsafeCoerce ev)
+  case mVal of
+    (Just v) -> f v
+    Nothing -> return ()
 buildEvent (JSClick f) = EV.click (const f)
 buildEvent (JSDoubleClick f) = EV.dblclick (const f)
 buildEvent (JSCanvasLoad f) = canvasLoad f
 
+{-
+JSO
+listProps :: Object -> IO [JSString]
+listProps (Object o) = I.listProps o
+-}
 
 getCurrentValue :: (FromJSRef b) => JSRef -> IO (Maybe b)
 getCurrentValue = getValue <=< getTarget
 
 getValue :: (FromJSRef b) => JSRef -> IO (Maybe b)
 getValue ref = fromJSRef =<< JSO.unsafeGetProp "value" (JSOI.Object ref)
+
+getCurrentInnerHTML :: (FromJSRef b) => JSRef -> IO (Maybe b)
+getCurrentInnerHTML = getInnerHTML <=< getTarget
+
+getInnerHTML :: (FromJSRef b) => JSRef -> IO (Maybe b)
+getInnerHTML ref = fromJSRef =<< JSO.unsafeGetProp "innerHTML" (JSOI.Object ref)
 
 getTarget :: JSRef -> IO (JSRef)
 getTarget ref = JSO.unsafeGetProp "target" (JSOI.Object ref)

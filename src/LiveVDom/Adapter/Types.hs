@@ -36,6 +36,7 @@ type TagName = String
 data JSEvent = JSInput       (String -> IO ())
              | JSKeydown     (String -> IO ())
              | JSKeypress    (String -> IO ())
+             | JSClickWithId (String -> IO ())
              | JSClick       (IO ())
              | JSDoubleClick (IO ())
              | JSCanvasLoad  (JSRef  -> IO ())
