@@ -119,10 +119,6 @@ buildEvent (JSKeypress f) = EV.keypress $ \ev -> do
     Nothing -> return ()
 buildEvent (JSClickWithId f) = EV.click $ \ev -> do
   threadDelay 1
-  -- print <=< fromJSRef =<< getTarget $ unsafeCoerce ev
-  -- x <- getTarget $ unsafeCoerce ev
-  -- print $ fromJSRef x
-  -- print =<< JSOI.listProps (JSOI.Object $ unsafeCoerce ev)
   mVal <- getCurrentInnerHTML (unsafeCoerce ev)
   case mVal of
     (Just v) -> f v
@@ -131,11 +127,6 @@ buildEvent (JSClick f) = EV.click (const f)
 buildEvent (JSDoubleClick f) = EV.dblclick (const f)
 buildEvent (JSCanvasLoad f) = canvasLoad f
 
-{-
-JSO
-listProps :: Object -> IO [JSString]
-listProps (Object o) = I.listProps o
--}
 
 getCurrentValue :: (FromJSRef b) => JSRef -> IO (Maybe b)
 getCurrentValue = getValue <=< getTarget

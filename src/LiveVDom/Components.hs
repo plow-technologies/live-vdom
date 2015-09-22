@@ -5,8 +5,15 @@ module LiveVDom.Components
   , buttonWith
   , label
   , labelWith
+  , inputSubmit
+  , inputSubmitWith
   , textBox
   , textBoxWith
+  , passwordBoxWith
+  , textAreaWith
+  , formWith
+  , linkWith
+  , imageWith
   , numberBox
   , numberBoxWith
   , selectList
@@ -56,6 +63,13 @@ labelWith f props str = (flip addProps) props $ addEvent (JSClickWithId $ \str -
     l = LiveVNode [] "div" [] $ S.fromList [LiveVText [] $ return str]
 
 
+inputSubmit :: Address (Event ()) -> [Property] -> String -> LiveVDom
+inputSubmit addr = inputSubmitWith (sendMessage addr $ Fired ())
+
+inputSubmitWith :: Message b -> [Property] -> String -> LiveVDom
+inputSubmitWith f props text = (flip addProps) props $ addEvent (JSClick . void $ runMessages f) $ 
+  LiveVNode [] "input" [Property "type" $ JSPText "submit"] $ S.fromList [LiveVText [] $ return text]
+
 -- | A textbox with type="text" that updates the given address with the
 -- current value of the textbox each time the textbox is updated
 textBox :: Address (Event String) -> [Property] -> Maybe String -> LiveVDom
@@ -85,6 +99,46 @@ numberBoxWith f = addEvent (JSInput $ \str -> void . runMessages . f . maybeToEv
   where tb = LiveVNode [] "input" [Property "type" $ JSPText "number"] S.empty
         maybeToEvent (Nothing) = Unfired
         maybeToEvent (Just e) = Fired e
+
+passwordBoxWith :: (String -> Message b) -> [Property] -> Maybe String -> LiveVDom
+passwordBoxWith f props mStr = (flip addProps) props $ addEvent (JSKeypress $ \str -> void . runMessages $ f str) tb
+  where
+    tb = LiveVNode [] "input" 
+                   (maybe id ((:) . Property "value" . JSPText . pack) mStr
+                     [Property "type" $ JSPText "password"])
+                   S.empty
+
+textAreaWith :: (String -> Message b) -> [Property] -> Maybe String -> LiveVDom
+textAreaWith f props mStr = (flip addProps) props $ addEvent (JSKeypress $ \str -> void . runMessages $ f str) tb
+  where
+    tb = LiveVNode [] "textArea" 
+                   (maybe id ((:) . Property "value" . JSPText . pack) mStr
+                     [Property "type" $ JSPText "text"])
+                   S.empty
+
+formWith :: (String -> Message b) -> [Property] -> S.Seq LiveVDom -> Maybe String -> LiveVDom
+formWith f props children mStr = (flip addProps) props $ addEvent (JSKeypress $ \str -> void . runMessages $ f str) tb
+  where
+    tb = LiveVNode [] "form" 
+                   (maybe id ((:) . Property "value" . JSPText . pack) mStr
+                     [Property "type" $ JSPText "text"])
+                   children
+
+linkWith :: (String -> Message b) -> [Property] -> S.Seq LiveVDom -> Maybe String -> LiveVDom
+linkWith f props children mStr = (flip addProps) props $ addEvent (JSKeypress $ \str -> void . runMessages $ f str) tb
+  where
+    tb = LiveVNode [] "a" 
+                   (maybe id ((:) . Property "value" . JSPText . pack) mStr
+                     [])
+                   children
+
+imageWith :: (String -> Message b) -> [Property] -> Maybe String -> LiveVDom
+imageWith f props mStr = (flip addProps) props $ addEvent (JSKeypress $ \str -> void . runMessages $ f str) tb
+  where
+    tb = LiveVNode [] "img" 
+                   (maybe id ((:) . Property "value" . JSPText . pack) mStr
+                     [])
+                   S.empty
 
 -- | A dropdown list
 selectList :: (Eq v) 
