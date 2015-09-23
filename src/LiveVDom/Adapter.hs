@@ -11,6 +11,8 @@ import qualified Data.Traversable    as TR
 import           LiveVDom.Adapter.Types
 
 import           GHCJS.Foreign
+import           GHCJS.Foreign.QQ
+
 import           GHCJS.Marshal
 import           GHCJS.Types
 import qualified GHCJS.VDOM as VD
@@ -66,12 +68,15 @@ instance ToJSRef PropList where
 toVNode :: VNodeAdapter -> IO VD.VNode
 toVNode (VNode events aTagName aProps aChildren) = do
   let evs = buildEvents events
-      attrs = buildProperties aProps
-      attrList = evs ++ attrs
+      attrs = mkCompleteAttributeObject $ buildProperties aProps :: Attribute
+      attrList = attrs:evs
   children <- TR.mapM toVNode aChildren
-  return $ E.custom tagName attrList $ mChildren children
+  let rslt = (E.custom tagName attrList $ mChildren children)
+  return rslt  
   where tagName = JSTR.pack aTagName
         mChildren xs = mkChildren xs
+        mkCompleteAttributeObject = mkAttribute "attributes" . IB.buildObjectI
+                                    . fmap (\(Attribute k v) -> (unsafeCoerce k,v))
 toVNode (VText _ev inner) = return $ E.text $ JSTR.pack inner
 
 
