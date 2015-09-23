@@ -17,6 +17,8 @@ import           Instances.TH.Lift
 import           GHCJS.Types
 import           GHCJS.Marshal
 
+import qualified GHCJS.VDOM.Event as EV
+import           GHCJS.VDOM.Attribute
 
 -- | A javascript property like 'input=value'
 -- or even 'ng-click="function()"'
@@ -41,16 +43,23 @@ data JSEvent = JSInput       (String -> IO ())
              | JSDoubleClick (IO ())
              | JSCanvasLoad  (JSRef  -> IO ())
 
+{-
+String -> IO ()
+IO ()
+JSRef -> IO ()
+-}
 
 -- | Intermediary type between ghcjs and haskell
 -- that has  a direct corrolation to the js-vnode
 -- library
 data VNodeAdapter =
-     VText {virtualTextEvents :: [JSEvent], virtualText :: String } -- ^ Child text with  no tag name, properties, or children
-   | VNode {vNodeEvents :: [JSEvent], vNodeTagName :: TagName, vNodePropsList :: [Property], vNodeChildren :: [VNodeAdapter]} -- ^ Basic tree structor for a node with children and properties
+     VText {virtualTextEvents :: [Attribute], virtualText :: String } -- ^ Child text with  no tag name, properties, or children
+   | VNode {vNodeEvents :: [Attribute], vNodeTagName :: TagName, vNodePropsList :: [Property], vNodeChildren :: [VNodeAdapter]} -- ^ Basic tree structor for a node with children and properties
     deriving (Typeable)
 
-
+-- testing here
+data VNodeAdapterTest =
+  VNodeTest {vNodeEventsTest :: [Attribute], vNodeTagNameTest :: TagName, vNodePropsListTest :: [Property], vNodeChildrenTest :: [VNodeAdapterTest]}
 -- | The types that are representable in javascript
 -- tag values
 data JSProp = JSPBool Bool
@@ -99,6 +108,22 @@ test = VNode [] "h1" [] [emptyDiv,buttonTag]
   where emptyDiv = VNode [] "div" [] []
         buttonTag = VNode [] "button" [buttonProp] [VText [] "Button Thing!"]
         buttonProp = Property "type" $ JSPText "button"
+
+test2 :: VNodeAdapterTest
+test2 = VNodeTest [EV.click (const $ print "asdf")] "div" [] []
+{-
+Ev.click (const increment)
+
+EV.click (const f)
+JSClick . void $ runMessages f
+labelWith :: (String -> Message b) -> [Property] -> String -> LiveVDom
+labelWith f props str = (flip addProps) props $ addEvent (JSClickWithId $ \str -> void . runMessages $ f str) l
+  where
+    l = LiveVNode [] "div" [] $ S.fromList [LiveVText [] $ return str]
+
+data VNodeAdapterTest =
+  VNodeTest {vNodeEventsTest :: [EV.MouseEvent], vNodeTagNameTest :: TagName, vNodePropsListTest :: [Property], vNodeChildrenTest :: [VNodeAdapterTest]}
+-}
 
 --  Should render to be like:
 --  <h1>

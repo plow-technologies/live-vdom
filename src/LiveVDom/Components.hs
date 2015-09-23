@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module LiveVDom.Components
-  (
-    button
+  ( Attribute
+  , button
   , buttonWith
   , label
   , labelWith
@@ -28,6 +28,7 @@ import           Control.Concurrent.STM.Notify
 import           LiveVDom.Event
 import           LiveVDom.Types hiding (LiveVDom)
 
+import           LiveVDom.Adapter
 import           LiveVDom.Adapter.Types
 import           LiveVDom.UserTypes
 
@@ -40,7 +41,57 @@ import           Text.Read
 import qualified Data.Map as Map
 import qualified Data.Sequence as S
 import qualified Data.Traversable as T
+import qualified GHCJS.VDOM.Event as EV
+import           GHCJS.VDOM.Attribute hiding (id)
 
+import           Control.Concurrent
+import           Unsafe.Coerce
+import           GHCJS.Marshal
+
+
+
+{- BUG - buildEvent
+  looks like there is delay from when the event gets called and when the variable gets passed to the event
+  if you add a threadDelay it causes some lag but the variable is passed. If there is no delay then the
+  variable will not make it until the next event
+-}
+
+-- Events
+
+clickToGetDivText :: (FromJSRef b) => (b -> IO()) -> Attribute
+clickToGetDivText f = EV.click $ \ev -> do
+  threadDelay 1
+  mVal <- getCurrentInnerHTML (unsafeCoerce ev)
+  case mVal of
+    (Just v) -> f v
+    Nothing -> return ()
+
+
+inputChange :: (FromJSRef b) => (b -> IO()) -> Attribute
+inputChange f = EV.change $ \ev -> do
+  threadDelay 1
+  mVal <- getCurrentValue (unsafeCoerce ev)
+  case mVal of
+    (Just v) -> f v
+    Nothing -> return ()
+
+keypress :: (FromJSRef b) => (b -> IO()) -> Attribute
+keypress f = EV.keypress $ \ev -> do
+  threadDelay 1
+  mVal <- getCurrentValue (unsafeCoerce ev)
+  case mVal of
+    (Just v) -> f v
+    Nothing -> return ()
+
+keydown :: (FromJSRef b) => (b -> IO()) -> Attribute
+keydown f = EV.keydown $ \ev -> do
+  threadDelay 1
+  mVal <- getCurrentValue (unsafeCoerce ev)
+  case mVal of
+    (Just v) -> f v
+    Nothing -> return ()
+
+-- Components
 
 -- | A basic button component with the default of accepting an STM Address
 button :: Address (Event ()) -> [Property] -> String -> LiveVDom
@@ -50,7 +101,7 @@ button addr = buttonWith (sendMessage addr $ Fired ())
 -- messages with the Message monad
 -- when the button is pressed
 buttonWith :: Message b -> [Property] -> String -> LiveVDom
-buttonWith f props text = (flip addProps) props $ addEvent (JSClick . void $ runMessages f) $ 
+buttonWith f props text = (flip addProps) props $ addEvent (EV.click (const $ void $ runMessages f)) $ 
   LiveVNode [] "button" [Property "type" $ JSPText "button"] $ S.fromList [LiveVText [] $ return text]
 
 label :: Address (Event String) -> [Property] -> String -> LiveVDom
@@ -58,17 +109,11 @@ label addr = labelWith (\str -> sendMessage addr $ Fired str)
 
 -- | A label with a click event
 labelWith :: (String -> Message b) -> [Property] -> String -> LiveVDom
-labelWith f props str = (flip addProps) props $ addEvent (JSClickWithId $ \str -> void . runMessages $ f str) l
+labelWith f props str = (flip addProps) props $ addEvent (clickToGetDivText $ \str -> void . runMessages $ f str) l
   where
     l = LiveVNode [] "div" [] $ S.fromList [LiveVText [] $ return str]
 
 
-inputSubmit :: Address (Event ()) -> [Property] -> String -> LiveVDom
-inputSubmit addr = inputSubmitWith (sendMessage addr $ Fired ())
-
-inputSubmitWith :: Message b -> [Property] -> String -> LiveVDom
-inputSubmitWith f props text = (flip addProps) props $ addEvent (JSClick . void $ runMessages f) $ 
-  LiveVNode [] "input" [Property "type" $ JSPText "submit"] $ S.fromList [LiveVText [] $ return text]
 
 -- | A textbox with type="text" that updates the given address with the
 -- current value of the textbox each time the textbox is updated
@@ -78,7 +123,7 @@ textBox addr = textBoxWith (\str -> sendMessage addr $ Fired str)
 -- | A textbox that allows you to send non-blocking messages with the Message
 -- monad whenever the input changes
 textBoxWith :: (String -> Message b) -> [Property] -> Maybe String -> LiveVDom
-textBoxWith f props mStr = (flip addProps) props $ addEvent (JSKeypress $ \str -> void . runMessages $ f str) tb
+textBoxWith f props mStr = (flip addProps) props $ addEvent (keypress $ \str -> void . runMessages $ f str) tb
   where
     tb = LiveVNode [] "input" 
                    (maybe id ((:) . Property "value" . JSPText . pack) mStr
@@ -88,57 +133,18 @@ textBoxWith f props mStr = (flip addProps) props $ addEvent (JSKeypress $ \str -
 -- | The same as a textbox with string but it parses the string to a number and
 -- has type="numberBox"
 numberBox :: Address (Event Int) -> LiveVDom
-numberBox addr = addEvent (JSInput $ \str -> void . Data.Traversable.sequence $ sendIO addr <$> Fired <$> (readMaybe str)) tb
+numberBox addr = addEvent (inputChange $ \str -> void . Data.Traversable.sequence $ sendIO addr <$> Fired <$> (readMaybe str)) tb
   where tb = LiveVNode [] "input" [Property "type" $ JSPText "text"] S.empty
   
 
 -- | The same as a textbox with string but it parses the string to a number and
 -- has type="numberBox"
 numberBoxWith :: (Event Int -> Message b) -> LiveVDom
-numberBoxWith f = addEvent (JSInput $ \str -> void . runMessages . f . maybeToEvent $ readMaybe str) tb
+numberBoxWith f = addEvent (inputChange $ \str -> void . runMessages . f . maybeToEvent $ readMaybe str) tb
   where tb = LiveVNode [] "input" [Property "type" $ JSPText "number"] S.empty
         maybeToEvent (Nothing) = Unfired
         maybeToEvent (Just e) = Fired e
 
-passwordBoxWith :: (String -> Message b) -> [Property] -> Maybe String -> LiveVDom
-passwordBoxWith f props mStr = (flip addProps) props $ addEvent (JSKeypress $ \str -> void . runMessages $ f str) tb
-  where
-    tb = LiveVNode [] "input" 
-                   (maybe id ((:) . Property "value" . JSPText . pack) mStr
-                     [Property "type" $ JSPText "password"])
-                   S.empty
-
-textAreaWith :: (String -> Message b) -> [Property] -> Maybe String -> LiveVDom
-textAreaWith f props mStr = (flip addProps) props $ addEvent (JSKeypress $ \str -> void . runMessages $ f str) tb
-  where
-    tb = LiveVNode [] "textArea" 
-                   (maybe id ((:) . Property "value" . JSPText . pack) mStr
-                     [Property "type" $ JSPText "text"])
-                   S.empty
-
-formWith :: (String -> Message b) -> [Property] -> S.Seq LiveVDom -> Maybe String -> LiveVDom
-formWith f props children mStr = (flip addProps) props $ addEvent (JSKeypress $ \str -> void . runMessages $ f str) tb
-  where
-    tb = LiveVNode [] "form" 
-                   (maybe id ((:) . Property "value" . JSPText . pack) mStr
-                     [Property "type" $ JSPText "text"])
-                   children
-
-linkWith :: (String -> Message b) -> [Property] -> S.Seq LiveVDom -> Maybe String -> LiveVDom
-linkWith f props children mStr = (flip addProps) props $ addEvent (JSKeypress $ \str -> void . runMessages $ f str) tb
-  where
-    tb = LiveVNode [] "a" 
-                   (maybe id ((:) . Property "value" . JSPText . pack) mStr
-                     [])
-                   children
-
-imageWith :: (String -> Message b) -> [Property] -> Maybe String -> LiveVDom
-imageWith f props mStr = (flip addProps) props $ addEvent (JSKeypress $ \str -> void . runMessages $ f str) tb
-  where
-    tb = LiveVNode [] "img" 
-                   (maybe id ((:) . Property "value" . JSPText . pack) mStr
-                     [])
-                   S.empty
 
 -- | A dropdown list
 selectList :: (Eq v) 
@@ -149,7 +155,7 @@ selectList :: (Eq v)
            -> LiveVDom
 selectList kvMap messageFunc props mSelected = 
     (flip addProps) props
-  $ addEvents [ (JSInput $ \str -> runMessages $ lookupKey str), (JSKeydown $ \str -> runMessages $ lookupKey str)]
+  $ addEvents [ (inputChange $ \str -> runMessages $ lookupKey str), (keydown $ \str -> runMessages $ lookupKey str)]
   $ LiveVNode [] "select" []
   $ fmap (\(k,v) -> option (Just v == mSelected) k) (S.fromList $ Map.toList kvMap)
   where lookupKey s = case Map.lookup s kvMap of
@@ -160,6 +166,7 @@ selectList kvMap messageFunc props mSelected =
 selectListWith :: (Ord k, Eq v) => ((k,v) -> String) -> Map.Map k v -> (v -> Message ()) -> [Property] -> Maybe v -> LiveVDom
 selectListWith buildDisplay kvMap = selectList displayMap
   where displayMap = Map.fromList $ (\t@(_,v) -> (buildDisplay t, v) ) <$> Map.toList kvMap
+
 
 option :: Bool -> String -> LiveVDom
 option selected opt = LiveVNode [] "option" ((if selected then ((Property "selected" $ JSPBool True):) else id) $ [Property "value" $ JSPText $ pack opt]) $ S.fromList [LiveVText [] $ return opt]
@@ -204,3 +211,55 @@ withMailbox :: STMMailbox a
               -> STMEnvelope (LiveVDom)
 withMailbox mb@(env, _) buildFunc = buildDom <$> env
   where buildDom value = buildFunc value (\newValue -> modifyMailbox mb (const newValue))
+
+
+-- Components that Michael added, need to decide which ones are general enough to be used in many projects
+-- which ones should be built locally
+
+inputSubmit :: Address (Event ()) -> [Property] -> String -> LiveVDom
+inputSubmit addr = inputSubmitWith (sendMessage addr $ Fired ())
+
+inputSubmitWith :: Message b -> [Property] -> String -> LiveVDom
+inputSubmitWith f props text = (flip addProps) props $ addEvent (EV.click (const $ void $ runMessages f)) $ 
+  LiveVNode [] "input" [Property "type" $ JSPText "submit"] $ S.fromList [LiveVText [] $ return text]
+
+passwordBoxWith :: (String -> Message b) -> [Property] -> Maybe String -> LiveVDom
+passwordBoxWith f props mStr = (flip addProps) props $ addEvent (keypress $ \str -> void . runMessages $ f str) tb
+  where
+    tb = LiveVNode [] "input" 
+                   (maybe id ((:) . Property "value" . JSPText . pack) mStr
+                     [Property "type" $ JSPText "password"])
+                   S.empty
+
+textAreaWith :: (String -> Message b) -> [Property] -> Maybe String -> LiveVDom
+textAreaWith f props mStr = (flip addProps) props $ addEvent (keypress $ \str -> void . runMessages $ f str) tb
+  where
+    tb = LiveVNode [] "textArea" 
+                   (maybe id ((:) . Property "value" . JSPText . pack) mStr
+                     [Property "type" $ JSPText "text"])
+                   S.empty
+
+formWith :: (String -> Message b) -> [Property] -> S.Seq LiveVDom -> Maybe String -> LiveVDom
+formWith f props children mStr = (flip addProps) props $ addEvent (keypress $ \str -> void . runMessages $ f str) tb
+  where
+    tb = LiveVNode [] "form" 
+                   (maybe id ((:) . Property "value" . JSPText . pack) mStr
+                     [Property "type" $ JSPText "text"])
+                   children
+
+linkWith :: (String -> Message b) -> [Property] -> S.Seq LiveVDom -> Maybe String -> LiveVDom
+linkWith f props children mStr = (flip addProps) props $ addEvent (keypress $ \str -> void . runMessages $ f str) tb
+  where
+    tb = LiveVNode [] "a" 
+                   (maybe id ((:) . Property "value" . JSPText . pack) mStr
+                     [])
+                   children
+
+imageWith :: (String -> Message b) -> [Property] -> Maybe String -> LiveVDom
+imageWith f props mStr = (flip addProps) props $ addEvent (keypress $ \str -> void . runMessages $ f str) tb
+  where
+    tb = LiveVNode [] "img" 
+                   (maybe id ((:) . Property "value" . JSPText . pack) mStr
+                     [])
+                   S.empty
+

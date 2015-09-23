@@ -21,8 +21,8 @@ Library
                         LiveVDom.Message
                         LiveVDom.Render
                         LiveVDom.Types
-  Other-Modules:        LiveVDom.Internal
                         LiveVDom.UserTypes
+  Other-Modules:        LiveVDom.Internal
   Build-Depends:        base >= 4 && < 5
                       , template-haskell
                       , containers
