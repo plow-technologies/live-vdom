@@ -65,7 +65,7 @@ instance ToJSRef PropList where
 
 toVNode :: VNodeAdapter -> IO VD.VNode
 toVNode (VNode events aTagName aProps aChildren) = do
-  let evs = buildEvents events
+  let evs = events
       attrs = mkCompleteAttributeObject $ buildProperties aProps :: Attribute
       attrList = attrs:evs
   children <- TR.mapM toVNode aChildren
@@ -73,8 +73,8 @@ toVNode (VNode events aTagName aProps aChildren) = do
   return rslt  
   where tagName = JSTR.pack aTagName
         mChildren xs = mkChildren xs
-        mkCompleteAttributeObject = mkAttribute "attributes" . IB.buildObjectI
-                                    . fmap (\(Attribute k v) -> (unsafeCoerce k,v))
+        mkCompleteAttributeObject = mkAttributeFromList "attributes" 
+                                    
 toVNode (VText _ev inner) = return $ E.text $ JSTR.pack inner
 
 
