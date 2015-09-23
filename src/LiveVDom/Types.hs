@@ -22,6 +22,7 @@ import           Language.Haskell.TH.Syntax
 -- VDOM related
 import           Data.String
 import           LiveVDom.Adapter.Types
+import           GHCJS.VDOM.Attribute
 
 
 instance (IsString a) => IsString (STMEnvelope a) where
@@ -70,7 +71,7 @@ toLiveVDomTH (PLiveInterpText t) = return $ AppE (AppE (ConE 'LiveVText) (ListE 
 
 
 -- | Transform LiveDom to VNode so that it can be processed
-toProducer :: LiveVDom JSEvent -> STMEnvelope (S.Seq VNodeAdapter)
+toProducer :: LiveVDom Attribute -> STMEnvelope (S.Seq VNodeAdapter)
 toProducer (LiveVText ev t) = (\text -> S.singleton $ VText ev text) <$> t
 toProducer (LiveVNode ev tn pl ch) = do
   ch' <- traverse toProducer ch

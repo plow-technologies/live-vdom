@@ -39,7 +39,6 @@ import qualified GHCJS.VDOM.Event as EV
 import           GHCJS.VDOM.Element
 import           GHCJS.Foreign.Callback
 import           JavaScript.Web.AnimationFrame (inAnimationFrame)
-import qualified GHCJS.VDOM.Event as EV
 
 
 -- | Run dom (not forked) forever. This receives the current dom

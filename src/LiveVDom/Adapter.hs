@@ -63,8 +63,6 @@ instance ToJSRef PropList where
         return obj
 
 
--- | Convert a VNodeAdapter to a VNode in order to diff it with vdom
--- and add the event hooks
 toVNode :: VNodeAdapter -> IO VD.VNode
 toVNode (VNode events aTagName aProps aChildren) = do
   let evs = buildEvents events
@@ -94,44 +92,7 @@ buildProperty (Property name (JSPDouble d)) = mkAttribute (JSTR.pack name) (pCas
 pCastToJSRef :: PToJSRef a => a -> JSRef
 pCastToJSRef = pToJSRef
 
-buildEvents :: [JSEvent] -> [Attribute]
-buildEvents = fmap buildEvent
-
-{- BUG - buildEvent
-  looks like there is delay from when the event gets called and when the variable gets passed to the event
-  if you add a threadDelay it causes some lag but the variable is passed. If there is no delay then the
-  variable will not make it until the next event
--}
-
-buildEvent :: JSEvent -> Attribute
-buildEvent (JSInput f) = EV.change $ \ev -> do
-  threadDelay 1
-  mVal <- getCurrentValue (unsafeCoerce ev)
-  case mVal of
-    (Just v) -> f v
-    Nothing -> return ()
-buildEvent (JSKeydown f) = EV.keydown $ \ev -> do
-  threadDelay 1
-  mVal <- getCurrentValue (unsafeCoerce ev)
-  case mVal of
-    (Just v) -> f v
-    Nothing -> return ()
-buildEvent (JSKeypress f) = EV.keypress $ \ev -> do
-  threadDelay 1
-  mVal <- getCurrentValue (unsafeCoerce ev)
-  case mVal of
-    (Just v) -> f v
-    Nothing -> return ()
-buildEvent (JSClickWithId f) = EV.click $ \ev -> do
-  threadDelay 1
-  mVal <- getCurrentInnerHTML (unsafeCoerce ev)
-  case mVal of
-    (Just v) -> f v
-    Nothing -> return ()
-buildEvent (JSClick f) = EV.click (const f)
-buildEvent (JSDoubleClick f) = EV.dblclick (const f)
-buildEvent (JSCanvasLoad f) = canvasLoad f
-
+-- DOM access functions
 
 getCurrentValue :: (FromJSRef b) => JSRef -> IO (Maybe b)
 getCurrentValue = getValue <=< getTarget
