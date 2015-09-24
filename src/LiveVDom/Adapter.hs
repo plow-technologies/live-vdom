@@ -16,7 +16,7 @@ import           GHCJS.Types
 import qualified GHCJS.VDOM as VD
 import qualified GHCJS.VDOM.Element as E
 import qualified Data.JSString as JSTR
-import qualified  JavaScript.Object as JSO
+import qualified JavaScript.Object as JSO
 import qualified JavaScript.Object.Internal as JSO
 import qualified GHCJS.VDOM.Event as EV
 import GHCJS.Foreign.Callback
@@ -26,7 +26,6 @@ import Unsafe.Coerce
 import GHCJS.Marshal.Pure
 import qualified GHCJS.Prim.Internal.Build as IB
 import Data.Bifunctor
-import qualified  JavaScript.Object.Internal as JSOI
 
 -- | The orphan instance is to seperate the GHCJS dependency
 --   from the JSProp definition
@@ -88,20 +87,21 @@ pCastToJSRef = pToJSRef
 
 -- DOM access functions
 
+-- attributes
 getCurrentValue :: (FromJSRef b) => JSRef -> IO (Maybe b)
 getCurrentValue = getValue <=< getTarget
 
 getValue :: (FromJSRef b) => JSRef -> IO (Maybe b)
-getValue ref = fromJSRef =<< JSO.unsafeGetProp "value" (JSOI.Object ref)
+getValue ref = fromJSRef =<< JSO.unsafeGetProp "value" (JSO.Object ref)
 
 getCurrentInnerHTML :: (FromJSRef b) => JSRef -> IO (Maybe b)
 getCurrentInnerHTML = getInnerHTML <=< getTarget
 
 getInnerHTML :: (FromJSRef b) => JSRef -> IO (Maybe b)
-getInnerHTML ref = fromJSRef =<< JSO.unsafeGetProp "innerHTML" (JSOI.Object ref)
+getInnerHTML ref = fromJSRef =<< JSO.unsafeGetProp "innerHTML" (JSO.Object ref)
 
 getTarget :: JSRef -> IO (JSRef)
-getTarget ref = JSO.unsafeGetProp "target" (JSOI.Object ref)
+getTarget ref = JSO.unsafeGetProp "target" (JSO.Object ref)
 
 canvasLoad :: (JSRef -> IO ()) -> Attribute
 canvasLoad = undefined 
