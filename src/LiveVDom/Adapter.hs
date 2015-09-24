@@ -30,13 +30,16 @@ import qualified GHCJS.Prim.Internal.Build as IB
 import Data.Bifunctor
 import qualified  JavaScript.Object.Internal as JSOI
 
+--ghcjs-base
+import           Data.JSString
+
 -- | The orphan instance is to seperate the GHCJS dependency
 --   from the JSProp definition
 --   This just pushes the data into a JSRef and then casts
 --   it back to the correct type so that
 --   toJSRef :: JSProp -> IO (JSRef JSProp)
 instance ToJSRef JSProp where
-  toJSRef (JSPText t) = toJSRef t
+  toJSRef (JSPString t) = toJSRef t
   toJSRef (JSPBool b) = toJSRef b
   toJSRef (JSPInt i) = toJSRef i
   toJSRef (JSPFloat f) = toJSRef f
@@ -59,7 +62,7 @@ instance ToJSRef PropList where
       -- So we create a map for vdom to access
       insert obj (Property name value) = do
         val <- toJSRef value
-        JSO.setProp (JSTR.pack name) val obj
+        JSO.setProp name val obj
         return obj
 
 
@@ -75,18 +78,18 @@ toVNode (VNode events aTagName aProps aChildren) = do
         mChildren xs = mkChildren xs
         mkCompleteAttributeObject = mkAttributeFromList "attributes" 
                                     
-toVNode (VText _ev inner) = return $ E.text $ JSTR.pack inner
+toVNode (VText _ev inner) = return $ E.text $ inner
 
 
 buildProperties :: [Property] -> [Attribute]
 buildProperties = fmap buildProperty
 
 buildProperty :: Property -> Attribute
-buildProperty (Property name (JSPBool b)) = mkAttribute (JSTR.pack name) (pCastToJSRef b)
-buildProperty (Property name (JSPText t)) = mkAttribute (JSTR.pack name) (pCastToJSRef t)
-buildProperty (Property name (JSPInt i)) = mkAttribute (JSTR.pack name) (pCastToJSRef i)
-buildProperty (Property name (JSPFloat f)) = mkAttribute (JSTR.pack name) (pCastToJSRef f)
-buildProperty (Property name (JSPDouble d)) = mkAttribute (JSTR.pack name) (pCastToJSRef d)
+buildProperty (Property name (JSPBool b)) = mkAttribute name (pCastToJSRef b)
+buildProperty (Property name (JSPString s)) = mkAttribute name (pCastToJSRef s)
+buildProperty (Property name (JSPInt i)) = mkAttribute name (pCastToJSRef i)
+buildProperty (Property name (JSPFloat f)) = mkAttribute name (pCastToJSRef f)
+buildProperty (Property name (JSPDouble d)) = mkAttribute name (pCastToJSRef d)
 
 
 pCastToJSRef :: PToJSRef a => a -> JSRef

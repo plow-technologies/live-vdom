@@ -24,13 +24,17 @@ import           Data.String
 import           LiveVDom.Adapter.Types
 import           GHCJS.VDOM.Attribute
 
+--ghcjs-base
+import           Data.JSString          (JSString)
+import qualified Data.JSString          as JS (pack, unpack)
+
 
 instance (IsString a) => IsString (STMEnvelope a) where
   fromString = return . fromString
 
 -- | Resulting type from the quasiquoted valentine
 data LiveVDom a =
-     LiveVText {liveVTextEvents :: [a], liveVirtualText :: STMEnvelope String } -- ^ Child text with  no tag name, properties, or children
+     LiveVText {liveVTextEvents :: [a], liveVirtualText :: STMEnvelope JSString } -- ^ Child text with  no tag name, properties, or children
    | LiveVNode {liveVNodeEvents :: [a], liveVNodeTagName :: TagName, liveVNodePropsList :: [Property], liveVNodeChildren :: (S.Seq (LiveVDom a))} -- ^ Basic tree structor for a node with children and properties
    | LiveChild {liveVChildEvents :: [a], liveVChild :: STMEnvelope (LiveVDom a)} -- ^ DOM that can change
    | LiveChildren {liveVChildEvents :: [a], liveVChildren :: STMEnvelope (S.Seq (LiveVDom a))} -- ^ A child that can change
@@ -38,14 +42,14 @@ data LiveVDom a =
 
 -- | Type that valentine is parsed into
 data PLiveVDom =
-     PLiveVText {pLiveVirtualText :: String } -- ^ Child text with  no tag name, properties, or children
+     PLiveVText {pLiveVirtualText :: JSString } -- ^ Child text with  no tag name, properties, or children
    | PLiveVNode {pLiveVNodeTagName :: TagName, pLiveVNodePropsList :: [Property], pLiveVNodeChildren :: [PLiveVDom]} -- ^ Basic tree structor for a node with children and properties
    | PLiveChild {pLiveVChild :: Exp}         -- ^ A parsed TH Exp that will get turned into LiveChild
    | PLiveChildren {pLiveVChildren :: Exp}         -- ^ A parsed TH Exp that will get turned into LiveChildren
    | PLiveInterpText  {pLiveInterpText :: Exp} -- ^ Interpolated text that will get transformed into LiveVText
 
 instance Lift PLiveVDom where
-  lift (PLiveVText st) = AppE (ConE 'PLiveVText) <$> (lift st)
+  lift (PLiveVText st) = AppE (ConE 'PLiveVText) <$> (lift $ JS.unpack st)
   lift (PLiveVNode tn pl ch) = do
     qtn <- lift tn
     qpl <- lift pl
@@ -58,7 +62,7 @@ instance Lift PLiveVDom where
 -- | Use template haskell to create the live vdom
 toLiveVDomTH :: PLiveVDom -> Q Exp
 toLiveVDomTH (PLiveVText st) = do
-  iStr <- lift st
+  iStr <- lift $ JS.unpack st
   return $ AppE (AppE (ConE 'LiveVText) (ListE [])) iStr
 toLiveVDomTH (PLiveVNode tn pl ch) = do
   qtn <- lift tn
