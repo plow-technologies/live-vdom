@@ -39,7 +39,6 @@ data LiveVDom a =
    | LiveChild {liveVChildEvents :: [a], liveVChild :: STMEnvelope (LiveVDom a)} -- ^ DOM that can change
    | LiveChildren {liveVChildEvents :: [a], liveVChildren :: STMEnvelope (S.Seq (LiveVDom a))} -- ^ A child that can change
 
-
 -- | Type that valentine is parsed into
 data PLiveVDom =
      PLiveVText {pLiveVirtualText :: JSString } -- ^ Child text with  no tag name, properties, or children
