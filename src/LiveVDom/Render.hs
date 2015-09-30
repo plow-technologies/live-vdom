@@ -52,7 +52,7 @@ runDomI container postRun envLD = do
   vdm <- recvIO envLD
   vmount <- mount container $ div () ()
   vn' <- renderDom vmount vdm          -- Render the initial dom
-  _ <- inAnimationFrame ContinueAsync postRun
+  _ <- inAnimationFrame ContinueAsync (\_ -> postRun)
   foldOnChangeWith waitForDom envLD (\_ v -> renderDom vmount v) vn'    -- pass the rendered dom into the fold that
                                                               -- renders the dom when it changes
 
