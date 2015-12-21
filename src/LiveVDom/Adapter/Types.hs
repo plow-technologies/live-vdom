@@ -45,7 +45,7 @@ data JSEvent = JSInput       (JSString -> IO ())
              | JSClickWithId (JSString -> IO ())
              | JSClick       (IO ())
              | JSDoubleClick (IO ())
-             | JSCanvasLoad  (JSRef  -> IO ())
+             | JSCanvasLoad  (JSVal  -> IO ())
 
 {-
 String -> IO ()

@@ -3,6 +3,7 @@ module LiveVDom.Components
   ( Attribute
   , button
   , buttonWith
+  , buttonWithKids
   , label
   , labelWith
   , inputSubmit
@@ -40,6 +41,7 @@ import           Data.Traversable
 import           Data.Text (Text, pack)
 import           Text.Read
 import qualified Data.Map as Map
+import           Data.Sequence    ((><))
 import qualified Data.Sequence as S
 import qualified Data.Traversable as T
 import qualified GHCJS.VDOM.Event as EV
@@ -62,7 +64,7 @@ import qualified Data.JSString          as JS (pack, unpack)
 
 -- Events
 
-clickToGetDivText :: (FromJSRef b) => (b -> IO()) -> Attribute
+clickToGetDivText :: (FromJSVal b) => (b -> IO()) -> Attribute
 clickToGetDivText f = EV.click $ \ev -> do
   threadDelay 1
   mVal <- getCurrentInnerHTML (unsafeCoerce ev)
@@ -71,7 +73,7 @@ clickToGetDivText f = EV.click $ \ev -> do
     Nothing -> return ()
 
 
-inputChange :: (FromJSRef b) => (b -> IO()) -> Attribute
+inputChange :: (FromJSVal b) => (b -> IO()) -> Attribute
 inputChange f = EV.change $ \ev -> do
   threadDelay 1
   mVal <- getCurrentValue (unsafeCoerce ev)
@@ -79,7 +81,7 @@ inputChange f = EV.change $ \ev -> do
     (Just v) -> f v
     Nothing -> return ()
 
-keypress :: (FromJSRef b) => (b -> IO()) -> Attribute
+keypress :: (FromJSVal b) => (b -> IO()) -> Attribute
 keypress f = EV.keypress $ \ev -> do
   threadDelay 1
   mVal <- getCurrentValue (unsafeCoerce ev)
@@ -87,7 +89,7 @@ keypress f = EV.keypress $ \ev -> do
     (Just v) -> f v
     Nothing -> return ()
 
-keydown :: (FromJSRef b) => (b -> IO()) -> Attribute
+keydown :: (FromJSVal b) => (b -> IO()) -> Attribute
 keydown f = EV.keydown $ \ev -> do
   threadDelay 1
   mVal <- getCurrentValue (unsafeCoerce ev)
@@ -107,6 +109,10 @@ button addr = buttonWith (sendMessage addr $ Fired ())
 buttonWith :: Message b -> [Property] -> JSString -> LiveVDom
 buttonWith f props text = (flip addProps) props $ addEvent (EV.click (const $ void $ runMessages f)) $ 
   LiveVNode [] "button" [Property "type" $ JSPString "button"] $ S.fromList [LiveVText [] $ return text]
+
+buttonWithKids :: Message b -> [Property] -> JSString -> S.Seq LiveVDom -> LiveVDom
+buttonWithKids f props text children = (flip addProps) props $ addEvent (EV.click (const $ void $ runMessages f)) $ 
+  LiveVNode [] "button" [Property "type" $ JSPString "button"] $ (><) (S.fromList [LiveVText [] $ return text]) children
 
 label :: Address (Event JSString) -> [Property] -> JSString -> LiveVDom
 label addr = labelWith (\str -> sendMessage addr $ Fired str) 
@@ -246,7 +252,7 @@ passwordBoxWith f props mStr = (flip addProps) props $ addEvent (keypress $ \str
 textAreaWith :: (JSString -> Message b) -> [Property] -> Maybe JSString -> LiveVDom
 textAreaWith f props mStr = (flip addProps) props $ addEvent (keypress $ \str -> void . runMessages $ f str) tb
   where
-    tb = LiveVNode [] "textArea" 
+    tb = LiveVNode [] "textarea" 
                    (maybe id ((:) . Property "value" . JSPString) mStr
                      [Property "type" $ JSPString "text"])
                    S.empty
