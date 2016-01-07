@@ -120,8 +120,8 @@ addProps l _ = l
 
 
 -- | add a dom listener to a a given node and all children of that node
-addDomListener :: TMVar () -> LiveVDom a -> IO ()
-addDomListener tm (LiveVText _ t) = atomically $ addListener t tm
+addDomListener :: TMVar () -> LiveVDom a -> STM ()
+addDomListener tm (LiveVText _ t) = addListener t tm
 addDomListener tm (StaticText _ t) = return ()
 addDomListener tm (LiveVNode _ _ _ ch) = traverse_ (addDomListener tm) ch
 addDomListener tm (LiveChild _ vch) = (addListener vch tm) >>

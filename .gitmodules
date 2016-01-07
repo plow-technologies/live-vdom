@@ -1,9 +1,9 @@
+[submodule "non-hackage-dependencies/ghcjs-vdom"]
+	path = non-hackage-dependencies/ghcjs-vdom
+	url = https://github.com/plow-technologies/ghcjs-vdom.git
 [submodule "non-hackage-dependencies/ghcjs-ffiqq"]
 	path = non-hackage-dependencies/ghcjs-ffiqq
 	url = https://github.com/ghcjs/ghcjs-ffiqq.git
-[submodule "non-hackage-dependencies/ghcjs-vdom"]
-	path = non-hackage-dependencies/ghcjs-vdom
-	url = git@github.com:plow-technologies/ghcjs-vdom.git
 [submodule "non-hackage-dependencies/stm-notify"]
 	path = non-hackage-dependencies/stm-notify
-	url = git@github.com:plow-technologies/stm-notify.git
+	url = https://github.com/plow-technologies/stm-notify.git
