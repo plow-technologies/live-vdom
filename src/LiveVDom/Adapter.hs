@@ -1,81 +1,169 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-{-# LANGUAGE  QuasiQuotes #-}
+{-# LANGUAGE BangPatterns      #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes       #-}
 module LiveVDom.Adapter where
 
 import           Control.Applicative
+import           Control.Concurrent
 import           Control.Monad
-import qualified Data.Traversable    as TR
+import qualified Data.Traversable              as TR
 
 import           LiveVDom.Adapter.Types
 
 import           GHCJS.Foreign
+import           GHCJS.Foreign.QQ
+
+import           Data.Bifunctor
+import qualified Data.JSString                 as JSTR
+import           GHCJS.Foreign.Callback
 import           GHCJS.Marshal
+import           GHCJS.Marshal.Pure
+import qualified GHCJS.Prim.Internal.Build     as IB
 import           GHCJS.Types
-import qualified GHCJS.VDOM as VD
+import qualified GHCJS.VDOM                    as VD
+import           GHCJS.VDOM.Attribute
+import qualified GHCJS.VDOM.Element            as E
+import qualified GHCJS.VDOM.Event              as EV
+import           GHCJS.VDOM.Unsafe
+import qualified JavaScript.Object             as JSO
+import qualified JavaScript.Object.Internal    as JSO
+import qualified JavaScript.Object.Internal    as JSOI
+import           Unsafe.Coerce
 
-
+--ghcjs-base
+import           Control.Concurrent.STM.Notify
+import           Data.Foldable
+import           Data.JSString
+import           Data.List                     as L
+import           Data.Monoid                   (mconcat)
+import qualified Data.Sequence                 as S
+import           LiveVDom.Types
 
 -- | The orphan instance is to seperate the GHCJS dependency
 --   from the JSProp definition
---   This just pushes the data into a JSRef and then casts
+--   This just pushes the data into a JSVal and then casts
 --   it back to the correct type so that
---   toJSRef :: JSProp -> IO (JSRef JSProp)
-instance ToJSRef JSProp where
-  toJSRef (JSPText t) = castToJSRef t
-  toJSRef (JSPBool b) = castToJSRef b
-  toJSRef (JSPInt i) = castToJSRef i
-  toJSRef (JSPFloat f) = castToJSRef f
-  toJSRef (JSPDouble d) = castToJSRef d
-
-
--- | Push a piece of data into a JSRef and cast it
-castToJSRef :: ToJSRef a => a -> IO (JSRef b)
-castToJSRef x = castRef <$> toJSRef x
-
-
+--   toJSVal :: JSProp -> IO (JSVal JSProp)
+instance ToJSVal JSProp where
+  toJSVal (JSPString t) = toJSVal t
+  toJSVal (JSPBool b) = toJSVal b
+  toJSVal (JSPInt i) = toJSVal i
+  toJSVal (JSPFloat f) = toJSVal f
+  toJSVal (JSPDouble d) = toJSVal d
 
 -- | Newtype to wrap the [Property] so that
 newtype PropList = PropList { unPropList :: [Property]} deriving (Show)
 
-
 -- | The orphan instance is again to seperate the GHCJS dependency
 --   from the definition of property
-instance ToJSRef PropList where
-  toJSRef (PropList xs) = do
-    attr <- newObj
-    foldM_ insert attr xs 
-    props <- newObj
-    setProp "attributes" attr props
-    return props
+instance ToJSVal PropList where
+  toJSVal (PropList xs) = do
+    attr@(JSO.Object attrO) <- JSO.create
+    foldM_ insert attr xs
+    props@(JSO.Object propsO) <- JSO.create
+    JSO.setProp (JSTR.pack "attributes") attrO props
+    return $ propsO
     where
       -- VDom uses the property object like a Map from name to value
       -- So we create a map for vdom to access
       insert obj (Property name value) = do
-        val <- toJSRef value
-        setProp name val obj
+        val <- toJSVal value
+        JSO.setProp name val obj
         return obj
 
 
--- | Convert a VNodeAdapter to a VNode in order to diff it with vdom
--- and add the event hooks
 toVNode :: VNodeAdapter -> IO VD.VNode
-toVNode (VNode events aTagName aProps aChildren) = do
-  props <- (addEvents events) =<< VD.toProperties . castRef <$> (toJSRef $ PropList aProps)
+toVNode (VNode !events !aTagName !aProps !aChildren) = do
+  let evs = events
+      attrs = mkCompleteAttributeObject $ buildProperties aProps :: Attribute
+      attrList = attrs:evs
   children <- TR.mapM toVNode aChildren
-  return $ VD.js_vnode tagName props $ mChildren children
-  where tagName = toJSString aTagName
-        mChildren [] = VD.noChildren
-        mChildren xs = VD.mkChildren xs
-toVNode (VText _ev inner) = return $ VD.text $ toJSString inner
+  let rslt = (E.custom tagName attrList $ mChildren children)
+  return rslt
+  where tagName = JSTR.pack aTagName
+        mChildren xs = mkChildren xs
+        mkCompleteAttributeObject = mkAttributeFromList "attributes"
+toVNode (VText _ev !inner) = return $ E.text $ inner
 
 
--- | Add a list of events to a list of properties
--- that can be added to a dom object
-addEvents :: [JSEvent] -> VD.Properties -> IO VD.Properties
-addEvents events props = foldM addEvent props events
-  where addEvent pl (JSInput f)  = VD.oninput f pl
-        addEvent pl (JSKeypress f) = VD.keypress f pl
-        addEvent pl (JSClick f) = (\cb -> VD.click cb pl) <$> (mkCallback f)
-        addEvent pl (JSDoubleClick f) = (\cb -> VD.dblclick cb pl) <$> (mkCallback f)
-        addEvent pl (JSCanvasLoad f) = VD.canvasLoad f pl
-        mkCallback = syncCallback NeverRetain False
+-- -- | Transform LiveDom to VNode so that it can be processed
+-- toProducer :: LiveVDom Attribute -> STMEnvelope (S.Seq VNodeAdapter)
+-- toProducer (LiveVText ev t) = (\text -> S.singleton $ VText ev text) <$> t
+-- toProducer (LiveVNode ev tn pl ch) = do
+--   ch' <- traverse toProducer ch
+--   return . S.singleton $ VNode ev tn pl $ toList (join ch')
+-- toProducer (LiveChild ev ivc) = join $ toProducer <$> (addEvents ev <$> ivc)
+-- toProducer (LiveChildren ev lvc) = do
+--   xs <- join $ sequence <$> (fmap (toProducer . addEvents ev)) <$> lvc
+--   return $ join xs
+
+
+mkVNode :: LiveVDom Attribute -> IO [VD.VNode]
+mkVNode (LiveVText ev !t) = ((:[]) . E.text) <$> recvIO t
+mkVNode (StaticText ev !t) = return [E.text t]
+mkVNode (LiveVNode ev !tname !propsList !children) = do
+  !children' <- Data.Foldable.msum <$> traverse mkVNode children :: IO [VD.VNode]
+  let attrs = mkAttributeFromList "attributes" $ buildProperties propsList
+      attrList = attrs:ev
+  return . (:[]) $ E.custom (JSTR.pack tname) attrList $ mkChildren $ children'
+mkVNode (LiveChild ev !ivc) = do
+  !vc <- recvIO ivc
+  mkVNode $ addEvents ev vc
+mkVNode (LiveChildren ev !lvc) = do
+  !vcs <- recvIO lvc
+  Data.Foldable.msum <$> traverse (mkVNode . (addEvents ev)) vcs
+
+-- | Print out the dom
+debugDom :: LiveVDom Attribute -> IO [String]
+debugDom (LiveVText ev t) =  (\i -> ["{ \"VText\": " ++ (show i) ++ " }"]) <$> recvIO t
+debugDom (StaticText ev t) = return $ ["{ \"Text\": " ++ (show t) ++ " }"]
+debugDom (LiveVNode ev tname propsList children) = do
+  children' <- Data.Foldable.concat <$> traverse debugDom (Data.Foldable.toList children) :: IO [String]
+  let attrs = ""
+  return $ ["{ \"VNode\": " ++ (show tname) ++ ", \"VChildren\": [" ++ (L.intercalate ", " children') ++ "] }"]
+debugDom (LiveChild ev !ivc) = do
+  vc <- debugDom =<< recvIO ivc :: IO [String]
+  return ["{ \"LiveChild\": " ++ (vc !! 0) ++ " }"]
+debugDom (LiveChildren ev lvc) = do
+  vcs <- recvIO lvc
+  res <- Data.Foldable.concat <$> traverse debugDom vcs :: IO [String]
+  return ["{ \"LiveChildren\": [" ++ (L.intercalate ", " res) ++ "] }"]
+
+
+buildProperties :: [Property] -> [Attribute]
+buildProperties = fmap buildProperty
+
+buildProperty :: Property -> Attribute
+buildProperty (Property !name (JSPBool !b)) = mkAttribute name (pCastToJSVal b)
+buildProperty (Property !name (JSPString !s)) = mkAttribute name (pCastToJSVal s)
+buildProperty (Property !name (JSPInt !i)) = mkAttribute name (pCastToJSVal i)
+buildProperty (Property !name (JSPFloat !f)) = mkAttribute name (pCastToJSVal f)
+buildProperty (Property !name (JSPDouble !d)) = mkAttribute name (pCastToJSVal d)
+
+
+pCastToJSVal :: PToJSVal a => a -> JSVal
+pCastToJSVal = pToJSVal
+
+-- DOM access functions
+
+getCurrentValue :: (FromJSVal b) => JSVal -> IO (Maybe b)
+getCurrentValue = getValue <=< getTarget
+
+getValue :: (FromJSVal b) => JSVal -> IO (Maybe b)
+getValue ref = fromJSVal =<< JSO.unsafeGetProp "value" (JSOI.Object ref)
+
+getCurrentInnerHTML :: (FromJSVal b) => JSVal -> IO (Maybe b)
+getCurrentInnerHTML = getInnerHTML <=< getTarget
+
+getInnerHTML :: (FromJSVal b) => JSVal -> IO (Maybe b)
+getInnerHTML ref = fromJSVal =<< JSO.unsafeGetProp "innerHTML" (JSOI.Object ref)
+
+getTarget :: JSVal -> IO (JSVal)
+getTarget ref = JSO.unsafeGetProp "target" (JSOI.Object ref)
+
+
+-- unfortunately needs to be fixed
+canvasLoad :: (JSVal -> IO ()) -> Attribute
+canvasLoad = undefined
+

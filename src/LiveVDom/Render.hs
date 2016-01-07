@@ -1,5 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes       #-}
+{-# LANGUAGE PartialTypeSignatures #-}
+{-# LANGUAGE BangPatterns #-}
 
 {-
   Straight stolt on from virtual-dom
@@ -25,16 +27,26 @@ import           Prelude                               hiding (div)
 import           GHCJS.Foreign
 import           GHCJS.Foreign.QQ
 import           GHCJS.VDOM
+import           GHCJS.Types
 
 
-import           LiveVDom.Adapter
+import           LiveVDom.Adapter (mkVNode, debugDom)
 import qualified LiveVDom.Adapter.Types                          as VDA
-
+import           Control.Concurrent
 import           Control.Concurrent.STM.Notify
 
 import           LiveVDom.Types hiding (LiveVDom)
 import           LiveVDom.UserTypes
+import qualified GHCJS.VDOM.Event as EV
+import           GHCJS.VDOM.Element
+import           GHCJS.Foreign.Callback
+import           JavaScript.Web.AnimationFrame (inAnimationFrame)
 
+
+-- Don't leave this in
+import Unsafe.Coerce
+import qualified GHCJS.VDOM.Element as E
+import Data.JSString (pack)
 
 -- | Run dom (not forked) forever. This receives the current dom
 -- and then renders it again each time it changes
@@ -43,11 +55,13 @@ runDomI :: DOMNode -- ^ Container to render the dom in
         -> STMEnvelope LiveVDom -- ^ dom to run and watch for changes
         -> IO ()
 runDomI container postRun envLD = do
+  EV.initEventDelegation EV.defaultEvents -- need this for events to work
   vdm <- recvIO envLD
-  vn' <- renderDom container emptyDiv vdm          -- Render the initial dom
-  _ <- atAnimationFrame postRun
-  foldOnChangeWith waitForDom envLD (renderDom container) vn'    -- pass the rendered dom into the fold that
-                                                   -- renders the dom when it changes
+  vmount <- mount container $ div () ()
+  vn' <- renderDom vmount vdm          -- Render the initial dom
+  _ <- inAnimationFrame ContinueAsync (\_ -> postRun)
+  foldOnChangeWith waitForDom envLD (\_ v -> renderDom vmount v) vn'    -- pass the rendered dom into the fold that
+                                                              -- renders the dom when it changes
 
 -- | Run the dom inside a container that
 runDom :: DOMNode
@@ -56,20 +70,17 @@ runDom :: DOMNode
       -> IO ()
 runDom c fi e = runDomI c fi $ return e
 
-
 -- | Given a container, the last rendering, and a current rendering,
 -- diff the new rendering from the old and return the new model of the dom
-renderDom :: DOMNode -> VNode -> LiveVDom -> IO VNode
-renderDom container old ld = do
-  let vna = toProducer ld
-  vnaL <- recvIO vna
-  vna' <- if S.length vnaL > 1
-    then fail "Having more than one node as the parent is illegal"
-    else return $ S.index vnaL 0
-  new <- toVNode vna'
-  let pa = diff old new
-  redraw container pa
-  return new
+renderDom :: VMount -> LiveVDom -> IO ()
+renderDom mount !ld = do
+  !vns <- mkVNode ld
+  !new <- case vns of
+            (x:[]) -> return x
+            _ -> fail "Having more than one node as the parent is illegal"
+  !pa <- diff mount new
+  _ <- patch mount pa
+  return ()
 
 
 -- | create an empty div to run dom inside of and add it to the
@@ -79,16 +90,3 @@ createContainer = do
   container <- [js| document.createElement('div') |] :: IO DOMNode
   [js_| document.body.appendChild(`container); |] :: IO ()
   return container
-
--- | Redraw the dom using a patch
-redraw :: DOMNode -> Patch -> IO ()
-redraw node pa = pa `seq` atAnimationFrame (patch node pa)
-
--- | Use the window requestAnimation frame
--- to run some IO action when able to
-atAnimationFrame :: IO () -> IO ()
-atAnimationFrame m = do
-  cb <- syncCallback NeverRetain False m
-  [js_| window.requestAnimationFrame(`cb); |]
-
-

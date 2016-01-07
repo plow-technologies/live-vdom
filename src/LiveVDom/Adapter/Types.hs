@@ -1,7 +1,7 @@
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE TemplateHaskell  #-}
+{-# LANGUAGE DeriveDataTypeable        #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE OverloadedStrings         #-}
+{-# LANGUAGE TemplateHaskell           #-}
 
 
 module LiveVDom.Adapter.Types where
@@ -11,48 +11,64 @@ import           Control.Applicative
 import           Data.Text
 import           Data.Typeable
 
-import           Language.Haskell.TH.Syntax
 import           Instances.TH.Lift
+import           Language.Haskell.TH.Syntax
 
-import           GHCJS.Types
 import           GHCJS.Marshal
+import           GHCJS.Types
 
+import           GHCJS.VDOM.Attribute
+import qualified GHCJS.VDOM.Event           as EV
+
+--ghcjs-base
+import           Data.JSString              (JSString)
+import qualified Data.JSString              as JS (pack, unpack)
 
 -- | A javascript property like 'input=value'
 -- or even 'ng-click="function()"'
 data Property = Property {
-  propertyName  :: String
+  propertyName  :: JSString
 , propertyValue :: JSProp
 } deriving (Show, Eq)
 
 
 instance Lift Property where
-  lift (Property pName pVal) = AppE <$> (AppE (ConE 'Property) <$> (lift pName)) <*> (lift pVal)
+  lift (Property pName pVal) = AppE <$> (AppE (ConE 'Property) <$> (lift . JS.unpack $ pName)) <*> (lift pVal)
 
 
 type TagName = String
 
 
-data JSEvent = JSInput (String -> IO ())
-             | JSKeypress (String -> IO ())
-             | JSClick (IO ())
+data JSEvent = JSInput       (JSString -> IO ())
+             | JSKeydown     (JSString -> IO ())
+             | JSKeypress    (JSString -> IO ())
+             | JSClickWithId (JSString -> IO ())
+             | JSClick       (IO ())
              | JSDoubleClick (IO ())
-             | forall a. JSCanvasLoad (JSRef a -> IO ())
+             | JSCanvasLoad  (JSVal  -> IO ())
+             | JSSubmit      (IO ())
 
+{-
+String -> IO ()
+IO ()
+JSRef -> IO ()
+-}
 
 -- | Intermediary type between ghcjs and haskell
 -- that has  a direct corrolation to the js-vnode
 -- library
 data VNodeAdapter =
-     VText {virtualTextEvents :: [JSEvent], virtualText :: String } -- ^ Child text with  no tag name, properties, or children
-   | VNode {vNodeEvents :: [JSEvent], vNodeTagName :: TagName, vNodePropsList :: [Property], vNodeChildren :: [VNodeAdapter]} -- ^ Basic tree structor for a node with children and properties
+     VText {virtualTextEvents :: [Attribute], virtualText :: JSString } -- ^ Child text with  no tag name, properties, or children
+   | VNode {vNodeEvents :: [Attribute], vNodeTagName :: TagName, vNodePropsList :: [Property], vNodeChildren :: [VNodeAdapter]} -- ^ Basic tree structor for a node with children and properties
     deriving (Typeable)
 
-
+-- testing here
+data VNodeAdapterTest =
+  VNodeTest {vNodeEventsTest :: [Attribute], vNodeTagNameTest :: TagName, vNodePropsListTest :: [Property], vNodeChildrenTest :: [VNodeAdapterTest]}
 -- | The types that are representable in javascript
 -- tag values
 data JSProp = JSPBool Bool
-            | JSPText Text
+            | JSPString JSString
             | JSPInt Int
             | JSPFloat Float
             | JSPDouble Double
@@ -60,7 +76,7 @@ data JSProp = JSPBool Bool
 
 instance Lift JSProp where
   lift (JSPBool b) = AppE (ConE 'JSPBool) <$> lift b
-  lift (JSPText t) = AppE (ConE 'JSPText) <$> lift t
+  lift (JSPString t) = AppE (ConE 'JSPString) <$> (lift . JS.unpack $ t)
   lift (JSPInt i) = AppE (ConE 'JSPInt) <$> lift i
   lift (JSPFloat f) = AppE (ConE 'JSPFloat) <$> lift f
   lift (JSPDouble d) = AppE(ConE 'JSPDouble) <$> lift d
@@ -74,19 +90,21 @@ class IsJSProp a where
 
 instance IsJSProp Bool where
     toJSProp = JSPBool
-instance IsJSProp Text where
-    toJSProp = JSPText
+--instance IsJSProp Text where
+--    toJSProp = JSPText
 instance IsJSProp Int where
     toJSProp = JSPInt
 instance IsJSProp Float where
     toJSProp = JSPFloat
 instance IsJSProp Double where
     toJSProp = JSPDouble
+instance IsJSProp JSString where
+    toJSProp = JSPString
 
 
 -- | Build a property from a name and value
 buildProp :: IsJSProp a =>
-             String       -- ^ Property name
+             JSString       -- ^ Property name
              -> a         -- ^ Property value
              -> Property
 buildProp name prop = Property name $ toJSProp prop
@@ -96,7 +114,23 @@ test :: VNodeAdapter
 test = VNode [] "h1" [] [emptyDiv,buttonTag]
   where emptyDiv = VNode [] "div" [] []
         buttonTag = VNode [] "button" [buttonProp] [VText [] "Button Thing!"]
-        buttonProp = Property "type" $ JSPText "button"
+        buttonProp = Property "type" $ JSPString "button"
+
+test2 :: VNodeAdapterTest
+test2 = VNodeTest [EV.click (const $ print "asdf")] "div" [] []
+{-
+Ev.click (const increment)
+
+EV.click (const f)
+JSClick . void $ runMessages f
+labelWith :: (String -> Message b) -> [Property] -> String -> LiveVDom
+labelWith f props str = (flip addProps) props $ addEvent (JSClickWithId $ \str -> void . runMessages $ f str) l
+  where
+    l = LiveVNode [] "div" [] $ S.fromList [StaticText str]
+
+data VNodeAdapterTest =
+  VNodeTest {vNodeEventsTest :: [EV.MouseEvent], vNodeTagNameTest :: TagName, vNodePropsListTest :: [Property], vNodeChildrenTest :: [VNodeAdapterTest]}
+-}
 
 --  Should render to be like:
 --  <h1>

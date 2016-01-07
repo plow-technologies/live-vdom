@@ -15,27 +15,28 @@ Library
   GHC-Options:          -Wall
   Exposed-Modules:      LiveVDom
                         LiveVDom.Adapter
+                        LiveVDom.Adapter.Internal
                         LiveVDom.Adapter.Types
                         LiveVDom.Components
                         LiveVDom.Event
                         LiveVDom.Message
                         LiveVDom.Render
                         LiveVDom.Types
-  Other-Modules:        LiveVDom.Internal
                         LiveVDom.UserTypes
+  Other-Modules:        LiveVDom.Internal
   Build-Depends:        base >= 4 && < 5
                       , template-haskell
                       , containers
                       , ghcjs-vdom
                       , ghcjs-ffiqq
-                      , ghcjs-base
-                      , ghcjs-canvas
+                      , ghcjs-base >= 0.2.0.0
                       , text
                       , safe
                       , stm
                       , stm-notify >= 0.2
                       , here
                       , th-lift-instances
+                      , ghcjs-prim
 
 Source-Repository head
   Type:                 git

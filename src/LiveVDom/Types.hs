@@ -22,6 +22,18 @@ import           Language.Haskell.TH.Syntax
 -- VDOM related
 import           Data.String
 import           LiveVDom.Adapter.Types
+import           GHCJS.VDOM.Attribute
+
+--ghcjs-base
+import           Data.JSString          (JSString)
+import qualified Data.JSString          as JS (pack, unpack)
+
+newtype DomLoc = DomLoc { unDomLoc :: Int } deriving (Eq, Show)
+type ElementLoc = [DomLoc]
+
+
+domAt :: ElementLoc -> LiveVDom a -> LiveVDom a
+domAt ((DomLoc i):xs) (LiveVNode _ _ _ children) = domAt xs $ S.index children i
 
 
 instance (IsString a) => IsString (STMEnvelope a) where
@@ -29,22 +41,24 @@ instance (IsString a) => IsString (STMEnvelope a) where
 
 -- | Resulting type from the quasiquoted valentine
 data LiveVDom a =
-     LiveVText {liveVTextEvents :: [a], liveVirtualText :: STMEnvelope String } -- ^ Child text with  no tag name, properties, or children
+     LiveVText {liveVTextEvents :: [a], liveVirtualText :: STMEnvelope JSString } -- ^ Child text with  no tag name, properties, or children
+   | StaticText { staticTextEvents :: [a], staticText :: JSString }
    | LiveVNode {liveVNodeEvents :: [a], liveVNodeTagName :: TagName, liveVNodePropsList :: [Property], liveVNodeChildren :: (S.Seq (LiveVDom a))} -- ^ Basic tree structor for a node with children and properties
    | LiveChild {liveVChildEvents :: [a], liveVChild :: STMEnvelope (LiveVDom a)} -- ^ DOM that can change
    | LiveChildren {liveVChildEvents :: [a], liveVChildren :: STMEnvelope (S.Seq (LiveVDom a))} -- ^ A child that can change
 
-
 -- | Type that valentine is parsed into
 data PLiveVDom =
-     PLiveVText {pLiveVirtualText :: String } -- ^ Child text with  no tag name, properties, or children
+     PLiveVText {pLiveVirtualText :: JSString } -- ^ Child text with  no tag name, properties, or children
    | PLiveVNode {pLiveVNodeTagName :: TagName, pLiveVNodePropsList :: [Property], pLiveVNodeChildren :: [PLiveVDom]} -- ^ Basic tree structor for a node with children and properties
    | PLiveChild {pLiveVChild :: Exp}         -- ^ A parsed TH Exp that will get turned into LiveChild
    | PLiveChildren {pLiveVChildren :: Exp}         -- ^ A parsed TH Exp that will get turned into LiveChildren
    | PLiveInterpText  {pLiveInterpText :: Exp} -- ^ Interpolated text that will get transformed into LiveVText
+   | PStaticVNode { pStaticVNode :: Exp }
+   | PStaticText { pStaticText :: Exp }
 
 instance Lift PLiveVDom where
-  lift (PLiveVText st) = AppE (ConE 'PLiveVText) <$> (lift st)
+  lift (PLiveVText st) = AppE (ConE 'PLiveVText) <$> (lift $ JS.unpack st)
   lift (PLiveVNode tn pl ch) = do
     qtn <- lift tn
     qpl <- lift pl
@@ -53,12 +67,14 @@ instance Lift PLiveVDom where
   lift (PLiveChild e) = return e
   lift (PLiveChildren e) = return e
   lift (PLiveInterpText t) = return t
+  lift (PStaticVNode n) = return n
+  lift (PStaticText t) = return t
 
 -- | Use template haskell to create the live vdom
 toLiveVDomTH :: PLiveVDom -> Q Exp
 toLiveVDomTH (PLiveVText st) = do
-  iStr <- lift st
-  return $ AppE (AppE (ConE 'LiveVText) (ListE [])) iStr
+  iStr <- lift $ JS.unpack st
+  return $ AppE (AppE (ConE 'StaticText) (ListE [])) iStr
 toLiveVDomTH (PLiveVNode tn pl ch) = do
   qtn <- lift tn
   qpl <- lift pl
@@ -67,10 +83,11 @@ toLiveVDomTH (PLiveVNode tn pl ch) = do
 toLiveVDomTH (PLiveChild e) = return $ AppE (AppE (ConE  'LiveChild) (ListE [])) e
 toLiveVDomTH (PLiveChildren e) = return $ AppE (AppE (ConE  'LiveChildren) (ListE [])) e
 toLiveVDomTH (PLiveInterpText t) = return $ AppE (AppE (ConE 'LiveVText) (ListE [])) t
-
+toLiveVDomTH (PStaticVNode e) = return e
+toLiveVDomTH (PStaticText t) = return $ AppE (AppE (ConE 'StaticText) (ListE [])) t
 
 -- | Transform LiveDom to VNode so that it can be processed
-toProducer :: LiveVDom JSEvent -> STMEnvelope (S.Seq VNodeAdapter)
+toProducer :: LiveVDom Attribute -> STMEnvelope (S.Seq VNodeAdapter)
 toProducer (LiveVText ev t) = (\text -> S.singleton $ VText ev text) <$> t
 toProducer (LiveVNode ev tn pl ch) = do
   ch' <- traverse toProducer ch
@@ -90,9 +107,10 @@ addEvent ev (LiveChildren evs vchs) = LiveChildren (evs ++ [ev]) vchs -- A child
 -- | Add multiple events to LiveVDom
 addEvents :: [a] -> LiveVDom a -> LiveVDom a
 addEvents ev (LiveVText evs ch) = LiveVText (evs ++ ev) ch -- Child text with  no tag name, properties, or children
+addEvents ev (StaticText evs ch) = StaticText (evs ++ ev) ch -- Child text with  no tag name, properties, or children
 addEvents ev (LiveVNode evs tn pls ch) = LiveVNode (evs ++ ev) tn pls ch -- Basic tree structor for a node with children and properties
 addEvents ev (LiveChild evs vch) = LiveChild (evs ++ ev) vch -- DOM that can change
-addEvents ev (LiveChildren evs vchs) = LiveChildren (evs ++ ev) vchs
+addEvents ev (LiveChildren evs vchs) = error "I don't think this is even used" -- LiveChildren (evs ++ ev) vchs
 
 -- | Add a list of property to LiveVNode if it is a liveVNode
 -- If it isn't it leaves the rest alone
@@ -100,9 +118,11 @@ addProps :: LiveVDom a -> [Property] -> LiveVDom a
 addProps (LiveVNode evs tn pl ch) pl' = LiveVNode evs tn (pl ++ pl') ch
 addProps l _ = l
 
+
 -- | add a dom listener to a a given node and all children of that node
-addDomListener :: TMVar () -> LiveVDom a -> STM ()
-addDomListener tm (LiveVText _ t) = addListener t tm
+addDomListener :: TMVar () -> LiveVDom a -> IO ()
+addDomListener tm (LiveVText _ t) = atomically $ addListener t tm
+addDomListener tm (StaticText _ t) = return ()
 addDomListener tm (LiveVNode _ _ _ ch) = traverse_ (addDomListener tm) ch
 addDomListener tm (LiveChild _ vch) = (addListener vch tm) >>
                                             (addDomListener tm =<< recv vch)
