@@ -1,37 +1,44 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-{-# LANGUAGE  QuasiQuotes #-}
+{-# LANGUAGE BangPatterns      #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes       #-}
 module LiveVDom.Adapter where
 
 import           Control.Applicative
 import           Control.Concurrent
 import           Control.Monad
-import qualified Data.Traversable    as TR
+import qualified Data.Traversable              as TR
 
 import           LiveVDom.Adapter.Types
 
 import           GHCJS.Foreign
 import           GHCJS.Foreign.QQ
 
+import           Data.Bifunctor
+import qualified Data.JSString                 as JSTR
+import           GHCJS.Foreign.Callback
 import           GHCJS.Marshal
+import           GHCJS.Marshal.Pure
+import qualified GHCJS.Prim.Internal.Build     as IB
 import           GHCJS.Types
-import qualified GHCJS.VDOM as VD
-import qualified GHCJS.VDOM.Element as E
-import qualified Data.JSString as JSTR
-import qualified  JavaScript.Object as JSO
-import qualified JavaScript.Object.Internal as JSO
-import qualified GHCJS.VDOM.Event as EV
-import GHCJS.Foreign.Callback
-import GHCJS.VDOM.Unsafe
-import GHCJS.VDOM.Attribute
-import Unsafe.Coerce
-import GHCJS.Marshal.Pure
-import qualified GHCJS.Prim.Internal.Build as IB
-import Data.Bifunctor
-import qualified  JavaScript.Object.Internal as JSOI
+import qualified GHCJS.VDOM                    as VD
+import           GHCJS.VDOM.Attribute
+import qualified GHCJS.VDOM.Element            as E
+import qualified GHCJS.VDOM.Event              as EV
+import           GHCJS.VDOM.Unsafe
+import qualified JavaScript.Object             as JSO
+import qualified JavaScript.Object.Internal    as JSO
+import qualified JavaScript.Object.Internal    as JSOI
+import           Unsafe.Coerce
 
 --ghcjs-base
+import           Control.Concurrent.STM.Notify
+import           Data.Foldable
 import           Data.JSString
+import           Data.List                     as L
+import           Data.Monoid                   (mconcat)
+import qualified Data.Sequence                 as S
+import           LiveVDom.Types
 
 -- | The orphan instance is to seperate the GHCJS dependency
 --   from the JSProp definition
@@ -53,7 +60,7 @@ newtype PropList = PropList { unPropList :: [Property]} deriving (Show)
 instance ToJSVal PropList where
   toJSVal (PropList xs) = do
     attr@(JSO.Object attrO) <- JSO.create
-    foldM_ insert attr xs 
+    foldM_ insert attr xs
     props@(JSO.Object propsO) <- JSO.create
     JSO.setProp (JSTR.pack "attributes") attrO props
     return $ propsO
@@ -67,29 +74,72 @@ instance ToJSVal PropList where
 
 
 toVNode :: VNodeAdapter -> IO VD.VNode
-toVNode (VNode events aTagName aProps aChildren) = do
+toVNode (VNode !events !aTagName !aProps !aChildren) = do
   let evs = events
       attrs = mkCompleteAttributeObject $ buildProperties aProps :: Attribute
       attrList = attrs:evs
   children <- TR.mapM toVNode aChildren
   let rslt = (E.custom tagName attrList $ mChildren children)
-  return rslt  
+  return rslt
   where tagName = JSTR.pack aTagName
         mChildren xs = mkChildren xs
-        mkCompleteAttributeObject = mkAttributeFromList "attributes" 
-                                    
-toVNode (VText _ev inner) = return $ E.text $ inner
+        mkCompleteAttributeObject = mkAttributeFromList "attributes"
+toVNode (VText _ev !inner) = return $ E.text $ inner
+
+
+-- -- | Transform LiveDom to VNode so that it can be processed
+-- toProducer :: LiveVDom Attribute -> STMEnvelope (S.Seq VNodeAdapter)
+-- toProducer (LiveVText ev t) = (\text -> S.singleton $ VText ev text) <$> t
+-- toProducer (LiveVNode ev tn pl ch) = do
+--   ch' <- traverse toProducer ch
+--   return . S.singleton $ VNode ev tn pl $ toList (join ch')
+-- toProducer (LiveChild ev ivc) = join $ toProducer <$> (addEvents ev <$> ivc)
+-- toProducer (LiveChildren ev lvc) = do
+--   xs <- join $ sequence <$> (fmap (toProducer . addEvents ev)) <$> lvc
+--   return $ join xs
+
+
+mkVNode :: LiveVDom Attribute -> IO [VD.VNode]
+mkVNode (LiveVText ev !t) = ((:[]) . E.text) <$> recvIO t
+mkVNode (StaticText ev !t) = return [E.text t]
+mkVNode (LiveVNode ev !tname !propsList !children) = do
+  !children' <- Data.Foldable.msum <$> traverse mkVNode children :: IO [VD.VNode]
+  let attrs = mkAttributeFromList "attributes" $ buildProperties propsList
+      attrList = attrs:ev
+  return . (:[]) $ E.custom (JSTR.pack tname) attrList $ mkChildren $ children'
+mkVNode (LiveChild ev !ivc) = do
+  !vc <- recvIO ivc
+  mkVNode $ addEvents ev vc
+mkVNode (LiveChildren ev !lvc) = do
+  !vcs <- recvIO lvc
+  Data.Foldable.msum <$> traverse (mkVNode . (addEvents ev)) vcs
+
+-- | Print out the dom
+debugDom :: LiveVDom Attribute -> IO [String]
+debugDom (LiveVText ev t) =  (\i -> ["{ \"VText\": " ++ (show i) ++ " }"]) <$> recvIO t
+debugDom (StaticText ev t) = return $ ["{ \"Text\": " ++ (show t) ++ " }"]
+debugDom (LiveVNode ev tname propsList children) = do
+  children' <- Data.Foldable.concat <$> traverse debugDom (Data.Foldable.toList children) :: IO [String]
+  let attrs = ""
+  return $ ["{ \"VNode\": " ++ (show tname) ++ ", \"VChildren\": [" ++ (L.intercalate ", " children') ++ "] }"]
+debugDom (LiveChild ev !ivc) = do
+  vc <- debugDom =<< recvIO ivc :: IO [String]
+  return ["{ \"LiveChild\": " ++ (vc !! 0) ++ " }"]
+debugDom (LiveChildren ev lvc) = do
+  vcs <- recvIO lvc
+  res <- Data.Foldable.concat <$> traverse debugDom vcs :: IO [String]
+  return ["{ \"LiveChildren\": [" ++ (L.intercalate ", " res) ++ "] }"]
 
 
 buildProperties :: [Property] -> [Attribute]
 buildProperties = fmap buildProperty
 
 buildProperty :: Property -> Attribute
-buildProperty (Property name (JSPBool b)) = mkAttribute name (pCastToJSVal b)
-buildProperty (Property name (JSPString s)) = mkAttribute name (pCastToJSVal s)
-buildProperty (Property name (JSPInt i)) = mkAttribute name (pCastToJSVal i)
-buildProperty (Property name (JSPFloat f)) = mkAttribute name (pCastToJSVal f)
-buildProperty (Property name (JSPDouble d)) = mkAttribute name (pCastToJSVal d)
+buildProperty (Property !name (JSPBool !b)) = mkAttribute name (pCastToJSVal b)
+buildProperty (Property !name (JSPString !s)) = mkAttribute name (pCastToJSVal s)
+buildProperty (Property !name (JSPInt !i)) = mkAttribute name (pCastToJSVal i)
+buildProperty (Property !name (JSPFloat !f)) = mkAttribute name (pCastToJSVal f)
+buildProperty (Property !name (JSPDouble !d)) = mkAttribute name (pCastToJSVal d)
 
 
 pCastToJSVal :: PToJSVal a => a -> JSVal
@@ -112,6 +162,8 @@ getInnerHTML ref = fromJSVal =<< JSO.unsafeGetProp "innerHTML" (JSOI.Object ref)
 getTarget :: JSVal -> IO (JSVal)
 getTarget ref = JSO.unsafeGetProp "target" (JSOI.Object ref)
 
+
+-- unfortunately needs to be fixed
 canvasLoad :: (JSVal -> IO ()) -> Attribute
-canvasLoad = undefined 
+canvasLoad = undefined
 

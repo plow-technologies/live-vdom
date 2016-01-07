@@ -1,7 +1,7 @@
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE TemplateHaskell  #-}
+{-# LANGUAGE DeriveDataTypeable        #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE OverloadedStrings         #-}
+{-# LANGUAGE TemplateHaskell           #-}
 
 
 module LiveVDom.Adapter.Types where
@@ -11,18 +11,18 @@ import           Control.Applicative
 import           Data.Text
 import           Data.Typeable
 
-import           Language.Haskell.TH.Syntax
 import           Instances.TH.Lift
+import           Language.Haskell.TH.Syntax
 
-import           GHCJS.Types
 import           GHCJS.Marshal
+import           GHCJS.Types
 
-import qualified GHCJS.VDOM.Event as EV
 import           GHCJS.VDOM.Attribute
+import qualified GHCJS.VDOM.Event           as EV
 
 --ghcjs-base
-import           Data.JSString          (JSString)
-import qualified Data.JSString          as JS (pack, unpack)
+import           Data.JSString              (JSString)
+import qualified Data.JSString              as JS (pack, unpack)
 
 -- | A javascript property like 'input=value'
 -- or even 'ng-click="function()"'
@@ -46,6 +46,7 @@ data JSEvent = JSInput       (JSString -> IO ())
              | JSClick       (IO ())
              | JSDoubleClick (IO ())
              | JSCanvasLoad  (JSVal  -> IO ())
+             | JSSubmit      (IO ())
 
 {-
 String -> IO ()
@@ -125,7 +126,7 @@ JSClick . void $ runMessages f
 labelWith :: (String -> Message b) -> [Property] -> String -> LiveVDom
 labelWith f props str = (flip addProps) props $ addEvent (JSClickWithId $ \str -> void . runMessages $ f str) l
   where
-    l = LiveVNode [] "div" [] $ S.fromList [LiveVText [] $ return str]
+    l = LiveVNode [] "div" [] $ S.fromList [StaticText str]
 
 data VNodeAdapterTest =
   VNodeTest {vNodeEventsTest :: [EV.MouseEvent], vNodeTagNameTest :: TagName, vNodePropsListTest :: [Property], vNodeChildrenTest :: [VNodeAdapterTest]}

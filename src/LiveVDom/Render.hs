@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes       #-}
 {-# LANGUAGE PartialTypeSignatures #-}
+{-# LANGUAGE BangPatterns #-}
 
 {-
   Straight stolt on from virtual-dom
@@ -26,9 +27,10 @@ import           Prelude                               hiding (div)
 import           GHCJS.Foreign
 import           GHCJS.Foreign.QQ
 import           GHCJS.VDOM
+import           GHCJS.Types
 
 
-import           LiveVDom.Adapter
+import           LiveVDom.Adapter (mkVNode, debugDom)
 import qualified LiveVDom.Adapter.Types                          as VDA
 import           Control.Concurrent
 import           Control.Concurrent.STM.Notify
@@ -40,6 +42,11 @@ import           GHCJS.VDOM.Element
 import           GHCJS.Foreign.Callback
 import           JavaScript.Web.AnimationFrame (inAnimationFrame)
 
+
+-- Don't leave this in
+import Unsafe.Coerce
+import qualified GHCJS.VDOM.Element as E
+import Data.JSString (pack)
 
 -- | Run dom (not forked) forever. This receives the current dom
 -- and then renders it again each time it changes
@@ -66,16 +73,13 @@ runDom c fi e = runDomI c fi $ return e
 -- | Given a container, the last rendering, and a current rendering,
 -- diff the new rendering from the old and return the new model of the dom
 renderDom :: VMount -> LiveVDom -> IO ()
-renderDom mount ld = do
-  let vna = toProducer ld
-  vnaL <- recvIO vna
-  vna' <- if S.length vnaL > 1
-    then fail "Having more than one node as the parent is illegal"
-    else return $ S.index vnaL 0
-  new <- toVNode vna'
-  pa <- diff mount new
-  -- redraw container pa
-  patch mount pa
+renderDom mount !ld = do
+  !vns <- mkVNode ld
+  !new <- case vns of
+            (x:[]) -> return x
+            _ -> fail "Having more than one node as the parent is illegal"
+  !pa <- diff mount new
+  _ <- patch mount pa
   return ()
 
 
@@ -86,5 +90,3 @@ createContainer = do
   container <- [js| document.createElement('div') |] :: IO DOMNode
   [js_| document.body.appendChild(`container); |] :: IO ()
   return container
-
-

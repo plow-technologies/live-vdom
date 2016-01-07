@@ -41,7 +41,6 @@ import           Data.Traversable
 import           Data.Text (Text, pack)
 import           Text.Read
 import qualified Data.Map as Map
-import           Data.Sequence    ((><))
 import qualified Data.Sequence as S
 import qualified Data.Traversable as T
 import qualified GHCJS.VDOM.Event as EV
@@ -108,11 +107,11 @@ button addr = buttonWith (sendMessage addr $ Fired ())
 -- when the button is pressed
 buttonWith :: Message b -> [Property] -> JSString -> LiveVDom
 buttonWith f props text = (flip addProps) props $ addEvent (EV.click (const $ void $ runMessages f)) $ 
-  LiveVNode [] "button" [Property "type" $ JSPString "button"] $ S.fromList [LiveVText [] $ return text]
+  LiveVNode [] "button" [Property "type" $ JSPString "button"] $ S.fromList [StaticText [] text]
 
 buttonWithKids :: Message b -> [Property] -> JSString -> S.Seq LiveVDom -> LiveVDom
 buttonWithKids f props text children = (flip addProps) props $ addEvent (EV.click (const $ void $ runMessages f)) $ 
-  LiveVNode [] "button" [Property "type" $ JSPString "button"] $ (><) (S.fromList [LiveVText [] $ return text]) children
+  LiveVNode [] "button" [Property "type" $ JSPString "button"] $ (S.><) (S.fromList [StaticText  [] text]) children
 
 label :: Address (Event JSString) -> [Property] -> JSString -> LiveVDom
 label addr = labelWith (\str -> sendMessage addr $ Fired str) 
@@ -121,7 +120,7 @@ label addr = labelWith (\str -> sendMessage addr $ Fired str)
 labelWith :: (JSString -> Message b) -> [Property] -> JSString -> LiveVDom
 labelWith f props str = (flip addProps) props $ addEvent (clickToGetDivText $ \str -> void . runMessages $ f str) l
   where
-    l = LiveVNode [] "div" [] $ S.fromList [LiveVText [] $ return str]
+    l = LiveVNode [] "div" [] $ S.fromList [StaticText [] str]
 
 
 
@@ -187,7 +186,7 @@ selectListWith buildDisplay kvMap = selectList displayMap
 
 
 option :: Bool -> JSString -> LiveVDom
-option selected opt = LiveVNode [] "option" ((if selected then ((Property "selected" $ JSPBool True):) else id) $ [Property "value" $ JSPString opt]) $ S.fromList [LiveVText [] $ return opt]
+option selected opt = LiveVNode [] "option" ((if selected then ((Property "selected" $ JSPBool True):) else id) $ [Property "value" $ JSPString opt]) $ S.fromList [StaticText [] opt]
 
 
 forEach :: STMMailbox (S.Seq a) -- ^ Values to map over
@@ -239,7 +238,7 @@ inputSubmit addr = inputSubmitWith (sendMessage addr $ Fired ())
 
 inputSubmitWith :: Message b -> [Property] -> JSString -> LiveVDom
 inputSubmitWith f props text = (flip addProps) props $ addEvent (EV.click (const $ void $ runMessages f)) $ 
-  LiveVNode [] "input" [Property "type" $ JSPString "submit"] $ S.fromList [LiveVText [] $ return text]
+  LiveVNode [] "input" [Property "type" $ JSPString "submit"] $ S.fromList [StaticText [] text]
 
 passwordBoxWith :: (JSString -> Message b) -> [Property] -> Maybe JSString -> LiveVDom
 passwordBoxWith f props mStr = (flip addProps) props $ addEvent (keypress $ \str -> void . runMessages $ f str) tb
