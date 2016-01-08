@@ -37,6 +37,7 @@ Library
                       , here
                       , th-lift-instances
                       , ghcjs-prim
+                      , mtl
 
 Source-Repository head
   Type:                 git

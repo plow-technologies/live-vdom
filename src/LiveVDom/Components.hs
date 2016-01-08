@@ -65,7 +65,6 @@ import qualified Data.JSString          as JS (pack, unpack)
 
 clickToGetDivText :: (FromJSVal b) => (b -> IO()) -> Attribute
 clickToGetDivText f = EV.click $ \ev -> do
-  threadDelay 1
   mVal <- getCurrentInnerHTML (unsafeCoerce ev)
   case mVal of
     (Just v) -> f v
@@ -74,27 +73,31 @@ clickToGetDivText f = EV.click $ \ev -> do
 
 inputChange :: (FromJSVal b) => (b -> IO()) -> Attribute
 inputChange f = EV.change $ \ev -> do
-  threadDelay 1
   mVal <- getCurrentValue (unsafeCoerce ev)
   case mVal of
     (Just v) -> f v
-    Nothing -> return ()
+    Nothing -> putStrLn "input fail"
 
 keypress :: (FromJSVal b) => (b -> IO()) -> Attribute
 keypress f = EV.keypress $ \ev -> do
-  threadDelay 1
   mVal <- getCurrentValue (unsafeCoerce ev)
   case mVal of
     (Just v) -> f v
-    Nothing -> return ()
+    Nothing -> putStrLn "Keypress fail"
 
 keydown :: (FromJSVal b) => (b -> IO()) -> Attribute
 keydown f = EV.keydown $ \ev -> do
-  threadDelay 1
   mVal <- getCurrentValue (unsafeCoerce ev)
   case mVal of
     (Just v) -> f v
-    Nothing -> return ()
+    Nothing -> putStrLn "keydown fail"
+
+keyup :: (FromJSVal b) => (b -> IO ()) -> Attribute
+keyup f = EV.keyup $ \ev -> do
+  mVal <- getCurrentValue $ unsafeCoerce ev
+  case mVal of
+    (Just v) -> f v
+    Nothing -> putStrLn "keyup fail"
 
 -- Components
 
@@ -132,13 +135,13 @@ textBox addr = textBoxWith (\str -> sendMessage addr $ Fired str)
 -- | A textbox that allows you to send non-blocking messages with the Message
 -- monad whenever the input changes
 textBoxWith :: (JSString -> Message b) -> [Property] -> Maybe JSString -> LiveVDom
-textBoxWith f props mStr = (flip addProps) props $ addEvent (keypress $ \str -> void . runMessages $ f str) tb
+textBoxWith f props mStr = (flip addProps) props $ addKeyPress $ addKeyUp tb
   where
     tb = LiveVNode [] "input" 
-                   (maybe id ((:) . Property "value" . JSPString) mStr
-                     [Property "type" $ JSPString "text"])
+                   ([Property "type" $ JSPString "text"])
                    S.empty
-
+    addKeyPress = addEvent (keypress $ \str -> void . runMessages $ f str)
+    addKeyUp = addEvent (keyup $ \str -> void . runMessages $ f str)
 -- | The same as a textbox with string but it parses the string to a number and
 -- has type="numberBox"
 numberBox :: Address (Event Int) -> LiveVDom

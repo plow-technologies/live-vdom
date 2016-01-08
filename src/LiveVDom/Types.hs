@@ -110,7 +110,7 @@ addEvents ev (LiveVText evs ch) = LiveVText (evs ++ ev) ch -- Child text with  n
 addEvents ev (StaticText evs ch) = StaticText (evs ++ ev) ch -- Child text with  no tag name, properties, or children
 addEvents ev (LiveVNode evs tn pls ch) = LiveVNode (evs ++ ev) tn pls ch -- Basic tree structor for a node with children and properties
 addEvents ev (LiveChild evs vch) = LiveChild (evs ++ ev) vch -- DOM that can change
-addEvents ev (LiveChildren evs vchs) = error "I don't think this is even used" -- LiveChildren (evs ++ ev) vchs
+addEvents ev (LiveChildren evs vchs) = error "LiveVDom.Types: addEvents, This shouldn't be used. Please report this as a bug" -- LiveChildren (evs ++ ev) vchs
 
 -- | Add a list of property to LiveVNode if it is a liveVNode
 -- If it isn't it leaves the rest alone
@@ -118,6 +118,16 @@ addProps :: LiveVDom a -> [Property] -> LiveVDom a
 addProps (LiveVNode evs tn pl ch) pl' = LiveVNode evs tn (pl ++ pl') ch
 addProps l _ = l
 
+addChildren :: S.Seq (LiveVDom a) -> LiveVDom a -> LiveVDom a
+addChildren children (LiveVText _ _) = error "Error: Text node can't have children"
+addChildren children (StaticText _ _) = error "Error: Static text nodes can't have children"
+addChildren children (LiveVNode evs tn pls ch) = LiveVNode evs tn pls $ ch S.>< children
+addChildren children (LiveChild _ _) = error "Error: LiveChild node can't have children"
+addChildren children (LiveChildren evs vchs) = LiveChildren evs $ (S.>< children) <$> vchs
+
+
+addChild :: LiveVDom a -> LiveVDom a -> LiveVDom a
+addChild x lv = addChildren (S.singleton x) lv
 
 -- | add a dom listener to a a given node and all children of that node
 addDomListener :: TMVar () -> LiveVDom a -> STM ()

@@ -80,6 +80,7 @@ renderDom mount !ld = do
             _ -> fail "Having more than one node as the parent is illegal"
   !pa <- diff mount new
   _ <- patch mount pa
+  putStrLn "Rendered"
   return ()
 
 
