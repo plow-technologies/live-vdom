@@ -86,17 +86,6 @@ toLiveVDomTH (PLiveInterpText t) = return $ AppE (AppE (ConE 'LiveVText) (ListE 
 toLiveVDomTH (PStaticVNode e) = return e
 toLiveVDomTH (PStaticText t) = return $ AppE (AppE (ConE 'StaticText) (ListE [])) t
 
--- | Transform LiveDom to VNode so that it can be processed
-toProducer :: LiveVDom Attribute -> STMEnvelope (S.Seq VNodeAdapter)
-toProducer (LiveVText ev t) = (\text -> S.singleton $ VText ev text) <$> t
-toProducer (LiveVNode ev tn pl ch) = do
-  ch' <- traverse toProducer ch
-  return . S.singleton $ VNode ev tn pl $ toList (join ch')
-toProducer (LiveChild ev ivc) = join $ toProducer <$> (addEvents ev <$> ivc)
-toProducer (LiveChildren ev lvc) = do
-  xs <- join $ sequence <$> (fmap (toProducer . addEvents ev)) <$> lvc
-  return $ join xs
-
 -- | Add an event to a LiveVDom
 addEvent :: a -> LiveVDom a -> LiveVDom a
 addEvent ev (LiveVText evs ch) = LiveVText (evs ++ [ev]) ch -- Child text with  no tag name, properties, or children

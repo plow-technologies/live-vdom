@@ -39,34 +39,6 @@ instance Lift Property where
 type TagName = String
 
 
-data JSEvent = JSInput       (JSString -> IO ())
-             | JSKeydown     (JSString -> IO ())
-             | JSKeypress    (JSString -> IO ())
-             | JSClickWithId (JSString -> IO ())
-             | JSClick       (IO ())
-             | JSDoubleClick (IO ())
-             | JSCanvasLoad  (JSVal  -> IO ())
-             | JSSubmit      (IO ())
-
-{-
-String -> IO ()
-IO ()
-JSRef -> IO ()
--}
-
--- | Intermediary type between ghcjs and haskell
--- that has  a direct corrolation to the js-vnode
--- library
-data VNodeAdapter =
-     VText {virtualTextEvents :: [Attribute], virtualText :: JSString } -- ^ Child text with  no tag name, properties, or children
-   | VNode {vNodeEvents :: [Attribute], vNodeTagName :: TagName, vNodePropsList :: [Property], vNodeChildren :: [VNodeAdapter]} -- ^ Basic tree structor for a node with children and properties
-    deriving (Typeable)
-
--- testing here
-data VNodeAdapterTest =
-  VNodeTest {vNodeEventsTest :: [Attribute], vNodeTagNameTest :: TagName, vNodePropsListTest :: [Property], vNodeChildrenTest :: [VNodeAdapterTest]}
--- | The types that are representable in javascript
--- tag values
 data JSProp = JSPBool Bool
             | JSPString JSString
             | JSPInt Int
@@ -84,20 +56,22 @@ instance Lift JSProp where
 
 -- | A provisional class to make building a JSProp
 -- easier
-
 class IsJSProp a where
     toJSProp :: a -> JSProp
 
+
 instance IsJSProp Bool where
     toJSProp = JSPBool
---instance IsJSProp Text where
---    toJSProp = JSPText
+
 instance IsJSProp Int where
     toJSProp = JSPInt
+
 instance IsJSProp Float where
     toJSProp = JSPFloat
+
 instance IsJSProp Double where
     toJSProp = JSPDouble
+
 instance IsJSProp JSString where
     toJSProp = JSPString
 
@@ -108,31 +82,3 @@ buildProp :: IsJSProp a =>
              -> a         -- ^ Property value
              -> Property
 buildProp name prop = Property name $ toJSProp prop
-
-
-test :: VNodeAdapter
-test = VNode [] "h1" [] [emptyDiv,buttonTag]
-  where emptyDiv = VNode [] "div" [] []
-        buttonTag = VNode [] "button" [buttonProp] [VText [] "Button Thing!"]
-        buttonProp = Property "type" $ JSPString "button"
-
-test2 :: VNodeAdapterTest
-test2 = VNodeTest [EV.click (const $ print "asdf")] "div" [] []
-{-
-Ev.click (const increment)
-
-EV.click (const f)
-JSClick . void $ runMessages f
-labelWith :: (String -> Message b) -> [Property] -> String -> LiveVDom
-labelWith f props str = (flip addProps) props $ addEvent (JSClickWithId $ \str -> void . runMessages $ f str) l
-  where
-    l = LiveVNode [] "div" [] $ S.fromList [StaticText str]
-
-data VNodeAdapterTest =
-  VNodeTest {vNodeEventsTest :: [EV.MouseEvent], vNodeTagNameTest :: TagName, vNodePropsListTest :: [Property], vNodeChildrenTest :: [VNodeAdapterTest]}
--}
-
---  Should render to be like:
---  <h1>
---    <div>
---    <button type="button">Button Thing!

@@ -43,3 +43,9 @@ children inners = do
 
 spawnVDom :: a -> VDom (STMMailbox a)
 spawnVDom = VDom . liftIO . spawnIO
+
+recvVDom :: STMEnvelope a -> VDom a
+recvVDom = VDom . liftIO . recvIO
+
+sendVDom :: a -> Address a -> VDom ()
+sendVDom val addr = VDom . liftIO $ sendIO addr val

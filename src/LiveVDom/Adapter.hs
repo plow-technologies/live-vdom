@@ -73,32 +73,6 @@ instance ToJSVal PropList where
         return obj
 
 
-toVNode :: VNodeAdapter -> IO VD.VNode
-toVNode (VNode !events !aTagName !aProps !aChildren) = do
-  let evs = events
-      attrs = mkCompleteAttributeObject $ buildProperties aProps :: Attribute
-      attrList = attrs:evs
-  children <- TR.mapM toVNode aChildren
-  let rslt = (E.custom tagName attrList $ mChildren children)
-  return rslt
-  where tagName = JSTR.pack aTagName
-        mChildren xs = mkChildren xs
-        mkCompleteAttributeObject = mkAttributeFromList "attributes"
-toVNode (VText _ev !inner) = return $ E.text $ inner
-
-
--- -- | Transform LiveDom to VNode so that it can be processed
--- toProducer :: LiveVDom Attribute -> STMEnvelope (S.Seq VNodeAdapter)
--- toProducer (LiveVText ev t) = (\text -> S.singleton $ VText ev text) <$> t
--- toProducer (LiveVNode ev tn pl ch) = do
---   ch' <- traverse toProducer ch
---   return . S.singleton $ VNode ev tn pl $ toList (join ch')
--- toProducer (LiveChild ev ivc) = join $ toProducer <$> (addEvents ev <$> ivc)
--- toProducer (LiveChildren ev lvc) = do
---   xs <- join $ sequence <$> (fmap (toProducer . addEvents ev)) <$> lvc
---   return $ join xs
-
-
 mkVNode :: LiveVDom Attribute -> IO [VD.VNode]
 mkVNode (LiveVText ev !t) = ((:[]) . E.text) <$> recvIO t
 mkVNode (StaticText ev !t) = return [E.text t]
