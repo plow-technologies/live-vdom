@@ -23,25 +23,32 @@ import           Control.Monad
 newtype Message a = Message { unMessage :: IO a }
   deriving (Monad, Functor, Applicative)
 
+-- | Run all messages
 runMessages :: Message a -> IO a
 runMessages = unMessage
 
+-- | Receive a value from an envelope
 recvMessage :: STMEnvelope a -> Message a
 recvMessage = Message . recvIO
 
+-- | Send a message to an address
 sendMessage :: Address a -> a -> Message ()
 sendMessage addr m = Message $ sendIO addr m
 
+-- | Modify the value in a mailbox.
+-- This is not atomic
 modifyMailbox :: STMMailbox a -> (a -> a)-> Message ()
 modifyMailbox (env, addr) f = do
   tg <- recvMessage env
   sendMessage addr $ f tg
 
+-- | Print a String to the console
 debug :: String -> Message ()
 debug = Message . putStrLn
 
+-- | Run an IO action inside of the Message monad
 asyncIO :: IO a -> Message (STMEnvelope (Maybe a))
-asyncIO action = 
+asyncIO action =
   Message $ do
     (resultEnvelope, resultAddress) <- spawnIO Nothing
     forkIO $ action >>= sendIO resultAddress . Just

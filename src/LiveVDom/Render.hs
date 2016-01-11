@@ -1,7 +1,7 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuasiQuotes       #-}
+{-# LANGUAGE BangPatterns          #-}
+{-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE PartialTypeSignatures #-}
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE QuasiQuotes           #-}
 
 {-
   Straight stolt on from virtual-dom
@@ -20,33 +20,35 @@ module LiveVDom.Render (
 
 
 import           Control.Monad
-import qualified Data.Sequence                         as S
-import           Prelude                               hiding (div)
+import qualified Data.Sequence                 as S
+import           Prelude                       hiding (div)
 
 
 import           GHCJS.Foreign
 import           GHCJS.Foreign.QQ
-import           GHCJS.VDOM
 import           GHCJS.Types
+import           GHCJS.VDOM
 
 
-import           LiveVDom.Adapter (mkVNode, debugDom)
-import qualified LiveVDom.Adapter.Types                          as VDA
 import           Control.Concurrent
 import           Control.Concurrent.STM.Notify
+import           LiveVDom.Adapter              (debugDom, mkVNode)
+import qualified LiveVDom.Adapter.Types        as VDA
 
-import           LiveVDom.Types hiding (LiveVDom)
-import           LiveVDom.UserTypes
-import qualified GHCJS.VDOM.Event as EV
-import           GHCJS.VDOM.Element
 import           GHCJS.Foreign.Callback
+import           GHCJS.VDOM.Element
+import qualified GHCJS.VDOM.Event              as EV
 import           JavaScript.Web.AnimationFrame (inAnimationFrame)
+import           LiveVDom.Types                hiding (LiveVDom)
+import           LiveVDom.UserTypes
 
 
--- Don't leave this in
-import Unsafe.Coerce
-import qualified GHCJS.VDOM.Element as E
-import Data.JSString (pack)
+-- Hopefully this can eventually be taken out
+import           Unsafe.Coerce
+
+
+import           Data.JSString                 (pack)
+import qualified GHCJS.VDOM.Element            as E
 
 -- | Run dom (not forked) forever. This receives the current dom
 -- and then renders it again each time it changes

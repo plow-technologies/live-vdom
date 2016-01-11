@@ -21,12 +21,12 @@ import           Language.Haskell.TH.Syntax
 
 -- VDOM related
 import           Data.String
-import           LiveVDom.Adapter.Types
 import           GHCJS.VDOM.Attribute
+import           LiveVDom.Adapter.Types
 
 --ghcjs-base
-import           Data.JSString          (JSString)
-import qualified Data.JSString          as JS (pack, unpack)
+import           Data.JSString                 (JSString)
+import qualified Data.JSString                 as JS (pack, unpack)
 
 newtype DomLoc = DomLoc { unDomLoc :: Int } deriving (Eq, Show)
 type ElementLoc = [DomLoc]
@@ -47,15 +47,15 @@ data LiveVDom a =
    | LiveChild {liveVChildEvents :: [a], liveVChild :: STMEnvelope (LiveVDom a)} -- ^ DOM that can change
    | LiveChildren {liveVChildEvents :: [a], liveVChildren :: STMEnvelope (S.Seq (LiveVDom a))} -- ^ A child that can change
 
--- | Type that valentine is parsed into
+-- | A template haskell representation for parsing
 data PLiveVDom =
      PLiveVText {pLiveVirtualText :: JSString } -- ^ Child text with  no tag name, properties, or children
    | PLiveVNode {pLiveVNodeTagName :: TagName, pLiveVNodePropsList :: [Property], pLiveVNodeChildren :: [PLiveVDom]} -- ^ Basic tree structor for a node with children and properties
    | PLiveChild {pLiveVChild :: Exp}         -- ^ A parsed TH Exp that will get turned into LiveChild
    | PLiveChildren {pLiveVChildren :: Exp}         -- ^ A parsed TH Exp that will get turned into LiveChildren
    | PLiveInterpText  {pLiveInterpText :: Exp} -- ^ Interpolated text that will get transformed into LiveVText
-   | PStaticVNode { pStaticVNode :: Exp }
-   | PStaticText { pStaticText :: Exp }
+   | PStaticVNode { pStaticVNode :: Exp }      -- ^ A static node of LiveVDom
+   | PStaticText { pStaticText :: Exp }        -- ^ A static node of just text
 
 instance Lift PLiveVDom where
   lift (PLiveVText st) = AppE (ConE 'PLiveVText) <$> (lift $ JS.unpack st)
@@ -71,6 +71,7 @@ instance Lift PLiveVDom where
   lift (PStaticText t) = return t
 
 -- | Use template haskell to create the live vdom
+-- the resulting type is LiveVDom
 toLiveVDomTH :: PLiveVDom -> Q Exp
 toLiveVDomTH (PLiveVText st) = do
   iStr <- lift $ JS.unpack st
@@ -107,6 +108,7 @@ addProps :: LiveVDom a -> [Property] -> LiveVDom a
 addProps (LiveVNode evs tn pl ch) pl' = LiveVNode evs tn (pl ++ pl') ch
 addProps l _ = l
 
+-- | Append a list of children to LiveVDom
 addChildren :: S.Seq (LiveVDom a) -> LiveVDom a -> LiveVDom a
 addChildren children (LiveVText _ _) = error "Error: Text node can't have children"
 addChildren children (StaticText _ _) = error "Error: Static text nodes can't have children"
@@ -114,7 +116,7 @@ addChildren children (LiveVNode evs tn pls ch) = LiveVNode evs tn pls $ ch S.>< 
 addChildren children (LiveChild _ _) = error "Error: LiveChild node can't have children"
 addChildren children (LiveChildren evs vchs) = LiveChildren evs $ (S.>< children) <$> vchs
 
-
+-- | Append a single child to LiveVDom
 addChild :: LiveVDom a -> LiveVDom a -> LiveVDom a
 addChild x lv = addChildren (S.singleton x) lv
 
@@ -130,6 +132,10 @@ addDomListener tm (LiveChildren _ vchs) = do
   xs <- recv vchs
   mapM_ (addDomListener tm) xs
 
+
+-- | Wait for a change in LiveVDom
+-- this recursively adds an empty tmvar to each element
+-- and waits for a change
 waitForDom :: STMEnvelope (LiveVDom a) -> IO ()
 waitForDom envDom = do
   dom <- recvIO envDom
