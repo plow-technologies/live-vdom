@@ -1,4 +1,5 @@
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
 {-# LANGUAGE TemplateHaskell   #-}
 module LiveVDom.Types where
@@ -10,10 +11,11 @@ import           Control.Concurrent.STM
 import           Control.Concurrent.STM.Notify
 import           Control.Monad                 hiding (mapM, mapM_, sequence)
 import           Data.Foldable                 (mapM_, toList, traverse_)
+import           Data.Monoid
+import           Data.Sequence                 ((|>))
 import qualified Data.Sequence                 as S
 import           Data.Traversable
 import           Prelude                       hiding (mapM, mapM_, sequence)
-
 
 -- Template haskell related
 import           Language.Haskell.TH
@@ -46,6 +48,21 @@ data LiveVDom a =
    | LiveVNode {liveVNodeEvents :: [a], liveVNodeTagName :: TagName, liveVNodePropsList :: [Property], liveVNodeChildren :: (S.Seq (LiveVDom a))} -- ^ Basic tree structor for a node with children and properties
    | LiveChild {liveVChildEvents :: [a], liveVChild :: STMEnvelope (LiveVDom a)} -- ^ DOM that can change
    | LiveChildren {liveVChildEvents :: [a], liveVChildren :: STMEnvelope (S.Seq (LiveVDom a))} -- ^ A child that can change
+
+
+-- The instance on Monoid is designed to make it easy to paste together nodes in a for each kind of way
+-- notably blending children and adding childs
+-- However the text conditions are terminal
+instance Monoid (LiveVDom a) where
+  mempty = StaticText []  ""
+  mappend txt@(LiveVText _ _ ) _ = txt
+  mappend (StaticText [] "") node = node -- memtpy law LHS
+  mappend txt@(StaticText _ _) node = txt
+  mappend (LiveVNode as tags props children) node = LiveVNode as tags props (children |> node)
+  mappend (LiveChild es env) node =  (LiveChildren es ((S.empty |> ) <$> env)) `mappend` node
+  mappend (LiveChildren es env) node = evaluateRHS node
+     where
+       evaluateRHS (LiveChild es' env') = LiveChildren (es <> es' ) ( (|>) <$> env <*> env')
 
 -- | A template haskell representation for parsing
 data PLiveVDom =
