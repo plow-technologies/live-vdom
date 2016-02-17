@@ -53,16 +53,21 @@ data LiveVDom a =
 -- The instance on Monoid is designed to make it easy to paste together nodes in a for each kind of way
 -- notably blending children and adding childs
 -- However the text conditions are terminal
+-- Events are kept with the incoming LiveVDom
+-- Except in the case of a Child being appended to another child or children
 instance Monoid (LiveVDom a) where
   mempty = StaticText []  ""
-  mappend txt@(LiveVText _ _ ) _ = txt
   mappend (StaticText [] "") node = node -- memtpy law LHS
+  mappend node (StaticText [] "")  = node -- memtpy law RHS
+  mappend txt@(LiveVText _ _ ) _ = txt
   mappend txt@(StaticText _ _) node = txt
   mappend (LiveVNode as tags props children) node = LiveVNode as tags props (children |> node)
   mappend (LiveChild es env) node =  (LiveChildren es ((S.empty |> ) <$> env)) `mappend` node
-  mappend (LiveChildren es env) node = evaluateRHS node
+  mappend lc@(LiveChildren es env) node = evaluateRHS node
      where
        evaluateRHS (LiveChild es' env') = LiveChildren (es <> es' ) ( (|>) <$> env <*> env')
+       evaluateRHS (LiveChildren es' env') = LiveChildren (es <> es') ((<>)  <$> env <*> env')
+       evaluateRHS l = LiveChildren es ((|> l) <$> env)
 
 -- | A template haskell representation for parsing
 data PLiveVDom =
