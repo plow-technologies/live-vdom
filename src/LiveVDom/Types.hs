@@ -49,25 +49,52 @@ data LiveVDom a =
    | LiveChild {liveVChildEvents :: [a], liveVChild :: STMEnvelope (LiveVDom a)} -- ^ DOM that can change
    | LiveChildren {liveVChildEvents :: [a], liveVChildren :: STMEnvelope (S.Seq (LiveVDom a))} -- ^ A child that can change
 
-
--- The instance on Monoid is designed to make it easy to paste together nodes in a for each kind of way
+-- |The instance on Monoid is designed to make it easy to paste together nodes in a for each kind of way
 -- notably blending children and adding childs
 -- However the text conditions are terminal
 -- Events are kept with the incoming LiveVDom
--- Except in the case of a Child being appended to another child or children
+-- append is like:
+{-|
+>>> let foo = [valentine| <div>
+                             <div>
+                                  <div>
+                                  <div> |]
+
+let bar = [valentine| <div> |]
+
+$> foo <> bar
+<div>
+   <div>
+      <div>
+      <div>
+         <bar>
+
+let baz = [valentine| <div>
+                         some text which will erase everything
+          |]
+
+let bing = [valentine| <div> |]
+
+$> baz <> bing
+<div>
+   some text which will erase everything
+
+|-}
+
 instance Monoid (LiveVDom a) where
   mempty = StaticText []  ""
-  mappend (StaticText [] "") node = node -- memtpy law LHS
-  mappend node (StaticText [] "")  = node -- memtpy law RHS
-  mappend txt@(LiveVText _ _ ) _ = txt
-  mappend txt@(StaticText _ _) node = txt
-  mappend (LiveVNode as tags props children) node = LiveVNode as tags props (children |> node)
-  mappend (LiveChild es env) node =  (LiveChildren es ((S.empty |> ) <$> env)) `mappend` node
-  mappend lc@(LiveChildren es env) node = evaluateRHS node
-     where
-       evaluateRHS (LiveChild es' env') = LiveChildren (es <> es' ) ( (|>) <$> env <*> env')
-       evaluateRHS (LiveChildren es' env') = LiveChildren (es <> es') ((<>)  <$> env <*> env')
-       evaluateRHS l = LiveChildren es ((|> l) <$> env)
+  mappend nodeL nodeR = case nodeL of
+           (StaticText [] "")  -> nodeR -- memtpy law RHS
+           txt@(LiveVText _ _ )  -> txt
+           txt@(StaticText _ _)  -> txt -- Notice this means that all text is terminal (with respect to the monoid)!!!
+           (LiveVNode as tags props children) -> LiveVNode as tags props (appendToLastChild nodeR children )
+           (LiveChild es env)  ->  LiveChildren es $ fmap (appendToLastChild nodeR) (S.singleton <$> env)
+           lc@(LiveChildren es env)  -> LiveChildren es (fmap (appendToLastChild nodeR) env)
+    where
+      appendToLastChild node children
+         |S.null children = S.singleton node
+         |otherwise = let index = S.length children  - 1
+                      in S.adjust (<> node) index children
 
 -- | A template haskell representation for parsing
 data PLiveVDom =
@@ -167,3 +194,6 @@ waitForDom envDom = do
     addDomListener listen dom
     return listen
   atomically $ readTMVar listener
+
+
+

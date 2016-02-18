@@ -23,6 +23,7 @@ Library
                         LiveVDom.Render
                         LiveVDom.Types
                         LiveVDom.UserTypes
+                        LiveVDom.Combinators
   Other-Modules:        LiveVDom.Internal
   Build-Depends:        base >= 4 && < 5
                       , template-haskell
