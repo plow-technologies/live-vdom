@@ -28,7 +28,7 @@ import           Control.Concurrent.STM.Notify
 import           Control.Monad                 hiding (mapM, mapM_, sequence)
 import           Data.Foldable                 (mapM_, toList, traverse_)
 import           Data.Monoid
-import           Data.Sequence                 ((|>))
+import           Data.Sequence                 ((<|), (|>))
 import qualified Data.Sequence                 as S
 import           Data.Traversable
 import           Prelude                       hiding (mapM, mapM_, sequence)
@@ -79,11 +79,15 @@ Which means if you make a stack of verticle elements you must feed it to a paren
 
 |-}
 
-(===) :: (LiveVDom a) -> LiveVDom a -> LiveVDom a
-(===) vdomT vdomB = case vdomT of
-                      (StaticText [] "")  -> vdomB -- memtpy law RHS
-                      t(LiveVText _ _ )  -> txt
-                      txt@(StaticText _ _)  -> txt -- Notice this means that all text is terminal (with respect to the monoid)!!!
-                      (LiveVNode as tags props children) -> LiveVNode as tags props (appendToLastChild nodeR children )
-                      (LiveChild es env)  ->  LiveChildren es $ fmap (appendToLastChild nodeR) (S.singleton <$> env)
-                      lc@(LiveChildren es env)  -> LiveChildren es (fmap (appendToLastChild nodeR) env) 
+(<<>>) :: (LiveVDom a) -> LiveVDom a -> LiveVDom a
+(<<>>) vdomT vdomB = case vdomT of
+                          (StaticText [] "")  -> vdomB -- memtpy law RHS
+                          txt@(LiveVText _ _ )  -> txt
+                          txt@(StaticText _ _)  -> txt -- Notice this means that all text is terminal (with respect to the monoid)!!!
+                          (LiveVNode as tags props children) -> LiveChildren [] (spawnChildren (vdomT <| vdomB <| S.empty))
+                          (LiveChild es env)  ->  LiveChildren [] (spawnChildren (vdomT <| vdomB <| S.empty))
+                          lc@(LiveChildren es env)  -> LiveChildren [] (spawnChildren (vdomT <| vdomB <| S.empty))
+      where
+        spawnChildren c = do
+            (val,_) <- spawnEnvelope c
+            val

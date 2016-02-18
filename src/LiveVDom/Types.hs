@@ -194,6 +194,3 @@ waitForDom envDom = do
     addDomListener listen dom
     return listen
   atomically $ readTMVar listener
-
-
-
