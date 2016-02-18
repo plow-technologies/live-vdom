@@ -139,5 +139,5 @@ getTarget ref = JSO.unsafeGetProp "target" (JSOI.Object ref)
 
 -- unfortunately needs to be fixed
 canvasLoad :: (JSVal -> IO ()) -> Attribute
-canvasLoad = undefined
+canvasLoad = error "canvas not loaded"
 

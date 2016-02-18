@@ -1,5 +1,5 @@
 Name:                   live-vdom
-Version:                0.1.0
+Version:                0.1.2
 Author:                 Scott <scottmurphy09@gmail.com>
 Maintainer:             Scott <scottmurphy09@gmail.com>
 License:                MIT
@@ -23,6 +23,7 @@ Library
                         LiveVDom.Render
                         LiveVDom.Types
                         LiveVDom.UserTypes
+                        LiveVDom.Combinators
   Other-Modules:        LiveVDom.Internal
   Build-Depends:        base >= 4 && < 5
                       , template-haskell
