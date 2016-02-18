@@ -228,20 +228,22 @@ inputSubmitWith f props text = (flip addProps) props $ addEvent (EV.click (const
   LiveVNode [] "input" [Property "type" $ JSPString "submit"] $ S.fromList [StaticText [] text]
 
 passwordBoxWith :: (JSString -> Message b) -> [Property] -> Maybe JSString -> LiveVDom
-passwordBoxWith f props mStr = (flip addProps) props $ addEvent (keypress $ \str -> void . runMessages $ f str) tb
+passwordBoxWith f props mStr = (flip addProps) props $ addKeyPress $ addKeyUp tb
   where
     tb = LiveVNode [] "input"
-                   (maybe id ((:) . Property "value" . JSPString) mStr
-                     [Property "type" $ JSPString "password"])
+                   ([Property "type" $ JSPString "password"])
                    S.empty
+    addKeyPress = addEvent (keypress $ \str -> void . runMessages $ f str)
+    addKeyUp = addEvent (keyup $ \str -> void . runMessages $ f str)
 
 textAreaWith :: (JSString -> Message b) -> [Property] -> Maybe JSString -> LiveVDom
-textAreaWith f props mStr = (flip addProps) props $ addEvent (keypress $ \str -> void . runMessages $ f str) tb
+textAreaWith  f props mStr = (flip addProps) props $ addKeyPress $ addKeyUp tb
   where
     tb = LiveVNode [] "textarea"
-                   (maybe id ((:) . Property "value" . JSPString) mStr
-                     [Property "type" $ JSPString "text"])
+                   ([Property "type" $ JSPString "password"])
                    S.empty
+    addKeyPress = addEvent (keypress $ \str -> void . runMessages $ f str)
+    addKeyUp = addEvent (keyup $ \str -> void . runMessages $ f str)
 
 formWith :: (JSString -> Message b) -> [Property] -> S.Seq LiveVDom -> Maybe JSString -> LiveVDom
 formWith f props children mStr = (flip addProps) props $ addEvent (keypress $ \str -> void . runMessages $ f str) tb
