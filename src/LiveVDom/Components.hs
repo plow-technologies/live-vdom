@@ -249,8 +249,7 @@ formWith :: (JSString -> Message b) -> [Property] -> S.Seq LiveVDom -> Maybe JSS
 formWith f props children mStr = (flip addProps) props $ addEvent (keypress $ \str -> void . runMessages $ f str) tb
   where
     tb = LiveVNode [] "form"
-                   (maybe id ((:) . Property "value" . JSPString) mStr
-                     [Property "type" $ JSPString "text"])
+                   ([])
                    children
 
 linkWith :: (JSString -> Message b) -> [Property] -> S.Seq LiveVDom -> Maybe JSString -> LiveVDom
