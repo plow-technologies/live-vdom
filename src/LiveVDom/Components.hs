@@ -111,6 +111,10 @@ buttonWith :: Message b -> [Property] -> JSString -> LiveVDom
 buttonWith f props text = (flip addProps) props $ addEvent (EV.click (const $ void $ runMessages f)) $
   LiveVNode [] "button" [Property "type" $ JSPString "button"] $ S.fromList [StaticText [] text]
 
+spanWith :: Message b -> [Property] -> LiveVDom
+spanWith f props = (flip addProps) props $ addEvent (EV.click (const $ void $ runMessages f)) $
+  LiveVNode [] "span" [] $ S.empty
+
 buttonWithKids :: Message b -> [Property] -> JSString -> S.Seq LiveVDom -> LiveVDom
 buttonWithKids f props text children = (flip addProps) props $ addEvent (EV.click (const $ void $ runMessages f)) $
   LiveVNode [] "button" [Property "type" $ JSPString "button"] $ (S.><) (S.fromList [StaticText  [] text]) children
