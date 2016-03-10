@@ -21,6 +21,7 @@ module LiveVDom.Components
   , selectList
   , selectListWith
   , forEach
+  , spanWith
   ) where
 
 import           Control.Concurrent.STM.Notify
