@@ -44,8 +44,12 @@ instance (IsString a) => IsString (STMEnvelope a) where
 -- | Resulting type from the quasiquoted valentine
 data LiveVDom a =
      LiveVText {liveVTextEvents :: [a], liveVirtualText :: STMEnvelope JSString } -- ^ Child text with  no tag name, properties, or children
-   | StaticText { staticTextEvents :: [a], staticText :: JSString }
-   | LiveVNode {liveVNodeEvents :: [a], liveVNodeTagName :: TagName, liveVNodePropsList :: [Property], liveVNodeChildren :: (S.Seq (LiveVDom a))} -- ^ Basic tree structor for a node with children and properties
+   | StaticText { staticTextEvents :: [a], staticText :: !JSString }
+   | LiveVNode {liveVNodeEvents :: [a]
+               ,liveVNodeTagName :: !TagName
+               ,liveVNodeNameSpace :: !JSString
+               , liveVNodePropsList :: [Property]
+               , liveVNodeChildren :: (S.Seq (LiveVDom a))} -- ^ Basic tree structor for a node with children and properties
    | LiveChild {liveVChildEvents :: [a], liveVChild :: STMEnvelope (LiveVDom a)} -- ^ DOM that can change
    | LiveChildren {liveVChildEvents :: [a], liveVChildren :: STMEnvelope (S.Seq (LiveVDom a))} -- ^ A child that can change
 
