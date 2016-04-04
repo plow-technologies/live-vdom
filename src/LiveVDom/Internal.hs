@@ -25,7 +25,7 @@ newtype VDom a = VDom { unVDom :: StateT LiveVDom IO a }
 
 -- | Sequence the internal actions of StateT to build dom
 buildVDom :: VDom () -> IO LiveVDom
-buildVDom (VDom state) = execStateT state (T.LiveVNode [] "div" [] S.empty)
+buildVDom (VDom state) = execStateT state (T.LiveVNode [] "div" Nothing [] S.empty)
 
 -- | Set the current level for vdom
 setVDom :: LiveVDom -> VDom ()
