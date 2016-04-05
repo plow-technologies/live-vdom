@@ -45,12 +45,12 @@ instance (IsString a) => IsString (STMEnvelope a) where
 data LiveVDom a =
      LiveVText {liveVTextEvents :: ![a], liveVirtualText :: STMEnvelope JSString } -- ^ Child text with  no tag name, properties, or children
    | StaticText { staticTextEvents :: ![a], staticText :: {-# UNPACK #-} !JSString }
-   | LiveVNode {liveVNodeEvents :: ![a]
-               ,liveVNodeTagName :: {-# UNPACK #-} !TagName
-               ,liveVNodeNameSpace :: {-# UNPACK  #-} !(Maybe JSString)
+   | LiveVNode { liveVNodeEvents :: ![a]
+               , liveVNodeTagName :: {-# UNPACK #-} !TagName
+               , liveVNodeNameSpace :: {-# UNPACK  #-} !(Maybe JSString)
                , liveVNodePropsList :: {-# UNPACK #-} ![Property]
                , liveVNodeChildren :: !(S.Seq (LiveVDom a))} -- ^ Basic tree structor for a node with children and properties
-   | LiveChild {liveVChildEvents :: ![a], liveVChild :: STMEnvelope (LiveVDom a)} -- ^ DOM that can change
+   | LiveChild { liveVChildEvents :: ![a], liveVChild :: STMEnvelope (LiveVDom a)} -- ^ DOM that can change
    | LiveChildren {liveVChildEvents :: ![a], liveVChildren :: STMEnvelope (S.Seq (LiveVDom a))} -- ^ A child that can change
 
 -- |The instance on Monoid is designed to make it easy to paste together nodes in a for each kind of way
