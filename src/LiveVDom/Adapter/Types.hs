@@ -38,7 +38,6 @@ instance Lift Property where
 
 type TagName = String
 
-
 data JSProp = JSPBool Bool
             | JSPString JSString
             | JSPInt Int

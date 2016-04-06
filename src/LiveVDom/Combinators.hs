@@ -84,7 +84,7 @@ Which means if you make a stack of verticle elements you must feed it to a paren
                           (StaticText [] "")  -> vdomB -- memtpy law RHS
                           txt@(LiveVText _ _ )  -> txt
                           txt@(StaticText _ _)  -> txt -- Notice this means that all text is terminal (with respect to the monoid)!!!
-                          (LiveVNode as tags props children) -> LiveChildren [] (spawnChildren (vdomT <| vdomB <| S.empty))
+                          (LiveVNode as tags namespace props children) -> LiveChildren [] (spawnChildren (vdomT <| vdomB <| S.empty))
                           (LiveChild es env)  ->  LiveChildren [] (spawnChildren (vdomT <| vdomB <| S.empty))
                           lc@(LiveChildren es env)  -> LiveChildren [] (spawnChildren (vdomT <| vdomB <| S.empty))
       where

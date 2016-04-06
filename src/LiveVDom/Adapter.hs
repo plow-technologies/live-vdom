@@ -76,11 +76,12 @@ instance ToJSVal PropList where
 mkVNode :: LiveVDom Attribute -> IO [VD.VNode]
 mkVNode (LiveVText ev !t) = ((:[]) . E.text) <$> recvIO t
 mkVNode (StaticText ev !t) = return [E.text t]
-mkVNode (LiveVNode ev !tname !propsList !children) = do
+mkVNode (LiveVNode ev !tname !namespace !propsList !children) = do
   !children' <- Data.Foldable.msum <$> traverse mkVNode children :: IO [VD.VNode]
   let attrs = mkAttributeFromList "attributes" $ buildProperties propsList
       attrList = attrs:ev
-  return . (:[]) $ E.custom (JSTR.pack tname) attrList $ mkChildren $ children'
+      customAndNamespace = maybe E.custom (const E.customSVG) $ namespace
+  return . (:[]) $ customAndNamespace (JSTR.pack tname) attrList $ mkChildren $ children'
 mkVNode (LiveChild ev !ivc) = do
   !vc <- recvIO ivc
   mkVNode $ addEvents ev vc
@@ -92,7 +93,7 @@ mkVNode (LiveChildren ev !lvc) = do
 debugDom :: LiveVDom Attribute -> IO [String]
 debugDom (LiveVText ev t) =  (\i -> ["{ \"VText\": " ++ (show i) ++ " }"]) <$> recvIO t
 debugDom (StaticText ev t) = return $ ["{ \"Text\": " ++ (show t) ++ " }"]
-debugDom (LiveVNode ev tname propsList children) = do
+debugDom (LiveVNode ev tname namespace propsList children) = do
   children' <- Data.Foldable.concat <$> traverse debugDom (Data.Foldable.toList children) :: IO [String]
   let attrs = ""
   return $ ["{ \"VNode\": " ++ (show tname) ++ ", \"VChildren\": [" ++ (L.intercalate ", " children') ++ "] }"]
