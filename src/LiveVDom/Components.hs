@@ -10,6 +10,7 @@ module LiveVDom.Components
   , inputSubmitWith
   , textBox
   , textBoxWith
+  , inputWith
   , passwordBoxWith
   , textAreaWith
   , formWith
@@ -146,6 +147,15 @@ textBoxWith f props mStr = (flip addProps) props $ addKeyPress $ addKeyUp tb
                    S.empty
     addKeyPress = addEvent (keypress $ \str -> void . runMessages $ f str)
     addKeyUp = addEvent (keyup $ \str -> void . runMessages $ f str)
+
+inputWith :: (JSString -> Message b) -> [Property] -> Maybe JSString -> LiveVDom
+inputWith f props mStr = (flip addProps) props $ addKeyPress $ addKeyUp tb
+  where
+    tb = LiveVNode [] "input"
+                   ([])
+                   S.empty
+    addKeyPress = addEvent (keypress $ \str -> void . runMessages $ f str)
+    addKeyUp = addEvent (keyup $ \str -> void . runMessages $ f str)    
 -- | The same as a textbox with string but it parses the string to a number and
 -- has type="numberBox"
 numberBox :: Address (Event Int) -> LiveVDom
