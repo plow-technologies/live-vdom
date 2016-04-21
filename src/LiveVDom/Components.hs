@@ -1,4 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes       #-}
+
 module LiveVDom.Components
   ( Attribute
   , button
@@ -10,6 +12,7 @@ module LiveVDom.Components
   , inputSubmitWith
   , textBox
   , textBoxWith
+  , textBoxWithEnterKey
   , inputWith
   , passwordBoxWith
   , textAreaWith
@@ -47,6 +50,10 @@ import qualified GHCJS.VDOM.Event              as EV
 import           LiveVDom.Message
 import           Text.Read
 
+import           GHCJS.Foreign.QQ
+import           GHCJS.Types
+import qualified Data.JSString                 as JS (unpack)
+
 import           Control.Concurrent
 import           GHCJS.Marshal
 import           Unsafe.Coerce
@@ -78,7 +85,7 @@ inputChange f = EV.change $ \ev -> do
   mVal <- getCurrentValue $ unsafeCoerce ev
   case mVal of
     (Just v) -> f v
-    Nothing -> putStrLn "input fail"
+    Nothing -> putStrLn "input fail" 
 
 keypress :: (FromJSVal b) => (b -> IO()) -> Attribute
 keypress f = EV.keypress $ \ev -> do
@@ -87,6 +94,23 @@ keypress f = EV.keypress $ \ev -> do
     (Just v) -> f v
     Nothing -> putStrLn "Keypress fail"
 
+-- | Similar to keypress, but takes an addition function param which gets called instead if the enter key is pressed
+keypressCheckEnter :: (FromJSVal b) => (b -> IO()) -> IO () -> Attribute
+keypressCheckEnter f enterF = EV.keypress $ \ev -> do
+  let jsVal :: JSVal
+      jsVal = unsafeCoerce ev
+  mVal <- getCurrentValue jsVal
+  case mVal of
+    Nothing -> putStrLn "enterPress fail"  
+    Just v -> do
+      case checkForEnterKey jsVal of
+        False -> f v
+        True  -> enterF
+        
+-- | Returns true if the jsval (keyboard event) has keyCode 13 (Enter Key)
+checkForEnterKey :: JSVal -> Bool
+checkForEnterKey keyEv = [js'|(`keyEv.which == 13) || (`keyEv.keyCode == 13)|]
+        
 keydown :: (FromJSVal b) => (b -> IO()) -> Attribute
 keydown f = EV.keydown $ \ev -> do
   mVal <- getCurrentValue $ unsafeCoerce ev
@@ -275,13 +299,23 @@ inputSubmitWith :: Message b -> [Property] -> JSString -> LiveVDom
 inputSubmitWith f props text = (flip addProps) props $ addEvent (EV.click (const $ void $ runMessages f)) $
   LiveVNode [] "input" Nothing [Property "type" $ JSPString "submit"] $ S.fromList [StaticText [] text]
 
-passwordBoxWith :: (JSString -> Message b) -> [Property] -> Maybe JSString -> LiveVDom
-passwordBoxWith f props mStr = (flip addProps) props $ addKeyPress $ addKeyUp tb
+-- | like textBoxWith, but takes addition function that gets called when enter key is pressed
+textBoxWithEnterKey :: (JSString -> Message b) -> Message () -> [Property] -> Maybe JSString -> LiveVDom
+textBoxWithEnterKey f enterFunc props mStr = (flip addProps) props $ addKeyPress $ addKeyUp tb
+  where
+    tb = LiveVNode [] "input" Nothing
+                   ([Property "type" $ JSPString "text"])
+                   S.empty
+    addKeyPress = addEvent (keypressCheckEnter (\str -> void . runMessages $ f str) (void $ runMessages enterFunc))
+    addKeyUp = addEvent (keyup $ \str -> void . runMessages $ f str)
+
+passwordBoxWith :: (JSString -> Message b) -> Message () -> [Property] -> Maybe JSString -> LiveVDom
+passwordBoxWith f enterFunc props mStr = (flip addProps) props $ addKeyPress $ addKeyUp tb
   where
     tb = LiveVNode [] "input" Nothing
                    ([Property "type" $ JSPString "password"])
                    S.empty
-    addKeyPress = addEvent (keypress $ \str -> void . runMessages $ f str)
+    addKeyPress = addEvent (keypressCheckEnter (\str -> void . runMessages $ f str) (void $ runMessages enterFunc))
     addKeyUp = addEvent (keyup $ \str -> void . runMessages $ f str)
 
 textAreaWith :: (JSString -> Message b) -> [Property] -> Maybe JSString -> LiveVDom
