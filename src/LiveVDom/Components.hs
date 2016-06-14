@@ -26,6 +26,7 @@ module LiveVDom.Components
   , selectListWith
   , forEach
   , spanWith
+  , withMailbox
   ) where
 
 import           Control.Concurrent.STM.Notify
