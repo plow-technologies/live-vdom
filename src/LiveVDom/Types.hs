@@ -112,7 +112,7 @@ data PLiveVDom =
    | PLiveInterpText  {pLiveInterpText :: Exp} -- ^ Interpolated text that will get transformed into LiveVText
    | PStaticVNode { pStaticVNode :: Exp }      -- ^ A static node of LiveVDom
    | PStaticText { pStaticText :: Exp }        -- ^ A static node of just text
-
+  deriving (Show,Eq)
 instance Lift PLiveVDom where
   lift (PLiveVText st) = AppE (ConE 'PLiveVText) <$> (lift $ JS.unpack st)
   lift (PLiveVNode tn ns pl ch) = do
