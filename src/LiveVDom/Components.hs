@@ -86,7 +86,7 @@ inputChange f = EV.change $ \ev -> do
   mVal <- getCurrentValue $ unsafeCoerce ev
   case mVal of
     (Just v) -> f v
-    Nothing -> putStrLn "input fail" 
+    Nothing -> putStrLn "input fail"
 
 keypress :: (FromJSVal b) => (b -> IO()) -> Attribute
 keypress f = EV.keypress $ \ev -> do
@@ -102,16 +102,16 @@ keypressCheckEnter f enterF = EV.keypress $ \ev -> do
       jsVal = unsafeCoerce ev
   mVal <- getCurrentValue jsVal
   case mVal of
-    Nothing -> putStrLn "enterPress fail"  
+    Nothing -> putStrLn "enterPress fail"
     Just v -> do
       case checkForEnterKey jsVal of
         False -> f v
         True  -> enterF
-        
+
 -- | Returns true if the jsval (keyboard event) has keyCode 13 (Enter Key)
 checkForEnterKey :: JSVal -> Bool
 checkForEnterKey keyEv = [js'|(`keyEv.which == 13) || (`keyEv.keyCode == 13)|]
-        
+
 keydown :: (FromJSVal b) => (b -> IO()) -> Attribute
 keydown f = EV.keydown $ \ev -> do
   mVal <- getCurrentValue $ unsafeCoerce ev
@@ -179,7 +179,7 @@ inputWith f props mStr = (flip addProps) props $ addKeyPress $ addKeyUp tb
     tb = LiveVNode [] "input" Nothing [] S.empty
     addKeyPress = addEvent (keypress $ \str -> void . runMessages $ f str)
     addKeyUp = addEvent (keyup $ \str -> void . runMessages $ f str)
-    
+
 -- | The same as a textbox with string but it parses the string to a number and
 -- has type="numberBox"
 numberBox :: Address (Event Int) -> LiveVDom
@@ -205,20 +205,51 @@ doubleBoxWith f props mStr = (flip addProps) props $ addEvent (keypress $ \str -
 
 
 -- | A dropdown list
+-- selectList :: (Eq v)
+--            => Map.Map JSString v -- ^ Map from strings (displayed in the menu) to values
+--            -> (v -> Message ()) -- ^ Selection handler, given the value associated with the selected string
+--            -> [Property] -- ^ Extra properties for the select element
+--            -> Maybe v -- ^ Default selection
+--            -> LiveVDom
+-- selectList kvMap messageFunc props mSelected =
+--     (flip addProps) props
+--   $ addEvents [ (inputChange $ \str -> runMessages $ lookupKey str), (keydown $ \str -> runMessages $ lookupKey str)]
+--   $ LiveVNode [] "select" Nothing []
+--   $ fmap (\(k,v) -> option' (Just v == mSelected) k) (S.fromList $ Map.toList kvMap)
+--   where lookupKey s = case Map.lookup s kvMap of
+--                         (Nothing) -> debug $ "Error looking up " ++ (show s)
+--                         (Just val) -> messageFunc val
+
+
+-- | A dropdown list
 selectList :: (Eq v)
            => Map.Map JSString v -- ^ Map from strings (displayed in the menu) to values
            -> (v -> Message ()) -- ^ Selection handler, given the value associated with the selected string
            -> [Property] -- ^ Extra properties for the select element
            -> Maybe v -- ^ Default selection
            -> LiveVDom
-selectList kvMap messageFunc props mSelected =
+selectList kvMap = selectList1 kvMap optionFunc
+  where optionFunc (k,_) = k
+
+
+-- | A dropdown list with custom function to derive selector name from key-value pairs
+selectList1 :: (Ord k, Eq v)
+            => Map.Map JSString v -- ^ Map from strings (displayed in the menu) to values
+            -> ((k,v) -> JSString) -- ^ Function to generate selector name in option from v
+            -> (v -> Message ()) -- ^ Selection handler, given the value associated with the selected string
+            -> [Property] -- ^ Extra properties for the select element
+            -> Maybe v -- ^ Default selection
+            -> LiveVDom
+selectList1 kvMap optionFunc messageFunc props mSelected =
     (flip addProps) props
   $ addEvents [ (inputChange $ \str -> runMessages $ lookupKey str), (keydown $ \str -> runMessages $ lookupKey str)]
   $ LiveVNode [] "select" Nothing []
-  $ fmap (\(k,v) -> option (Just v == mSelected) k) (S.fromList $ Map.toList kvMap)
+  $ fmap (\t@(k,v) -> option' (Just v == mSelected) k (optionFunc t)) (S.fromList $ Map.toList kvMap)
   where lookupKey s = case Map.lookup s kvMap of
                         (Nothing) -> debug $ "Error looking up " ++ (show s)
                         (Just val) -> messageFunc val
+
+
 
 -- | A dropdown list built from non-string keys and a function to derive selector names from key-value pairs
 selectListWith :: (Ord k, Eq v) => ((k,v) -> JSString) -> Map.Map k v -> (v -> Message ()) -> [Property] -> Maybe v -> LiveVDom
@@ -227,8 +258,17 @@ selectListWith buildDisplay kvMap = selectList displayMap
 
 
 
+option' :: Bool
+        -> JSString    -- value
+        -> JSString    -- option
+        -> LiveVDom
+option' selected val opt = LiveVNode [] "option" Nothing ((if selected then ((Property "selected" $ JSPBool True):) else id) $ [Property "value" $ JSPString val]) $ S.fromList [StaticText [] opt]
+
+
 option :: Bool -> JSString -> LiveVDom
-option selected opt = LiveVNode [] "option" Nothing ((if selected then ((Property "selected" $ JSPBool True):) else id) $ [Property "value" $ JSPString opt]) $ S.fromList [StaticText [] opt]
+option selected opt = option' selected opt opt
+
+
 
 
 
@@ -346,7 +386,7 @@ linkWith f props children mStr = (flip addProps) props $ addEvent (keypress $ \s
 imageWith :: (JSString -> Message b) -> [Property] -> Maybe JSString -> LiveVDom
 imageWith f props mStr = (flip addProps) props $ addEvent (keypress $ \str -> void . runMessages $ f str) tb
   where
-    tb = LiveVNode [] "img" Nothing   
+    tb = LiveVNode [] "img" Nothing
                    (maybe id ((:) . Property "value" . JSPString) mStr
                      [])
                    S.empty
