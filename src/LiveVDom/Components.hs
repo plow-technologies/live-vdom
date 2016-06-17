@@ -1,5 +1,5 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuasiQuotes       #-}
+{-# LANGUAGE OverloadedStrings    #-}
+{-# LANGUAGE QuasiQuotes          #-}
 
 module LiveVDom.Components
   ( Attribute
@@ -23,6 +23,7 @@ module LiveVDom.Components
   , numberBoxWith
   , doubleBoxWith
   , selectList
+  , selectList1
   , selectListWith
   , forEach
   , spanWith
@@ -205,46 +206,31 @@ doubleBoxWith f props mStr = (flip addProps) props $ addEvent (keypress $ \str -
 
 
 -- | A dropdown list
--- selectList :: (Eq v)
---            => Map.Map JSString v -- ^ Map from strings (displayed in the menu) to values
---            -> (v -> Message ()) -- ^ Selection handler, given the value associated with the selected string
---            -> [Property] -- ^ Extra properties for the select element
---            -> Maybe v -- ^ Default selection
---            -> LiveVDom
--- selectList kvMap messageFunc props mSelected =
---     (flip addProps) props
---   $ addEvents [ (inputChange $ \str -> runMessages $ lookupKey str), (keydown $ \str -> runMessages $ lookupKey str)]
---   $ LiveVNode [] "select" Nothing []
---   $ fmap (\(k,v) -> option' (Just v == mSelected) k) (S.fromList $ Map.toList kvMap)
---   where lookupKey s = case Map.lookup s kvMap of
---                         (Nothing) -> debug $ "Error looking up " ++ (show s)
---                         (Just val) -> messageFunc val
-
-
--- | A dropdown list
+-- General implementation of selectList1
 selectList :: (Eq v)
            => Map.Map JSString v -- ^ Map from strings (displayed in the menu) to values
            -> (v -> Message ()) -- ^ Selection handler, given the value associated with the selected string
            -> [Property] -- ^ Extra properties for the select element
            -> Maybe v -- ^ Default selection
            -> LiveVDom
-selectList kvMap = selectList1 kvMap optionFunc
-  where optionFunc (k,_) = k
+selectList kvMap = selectList1 kvMap defaultDisplayFunc defaultDisplayFunc
+  where defaultDisplayFunc (k,_) = k
 
 
 -- | A dropdown list with custom function to derive selector name from key-value pairs
-selectList1 :: (Ord k, Eq v)
-            => Map.Map JSString v -- ^ Map from strings (displayed in the menu) to values
-            -> ((k,v) -> JSString) -- ^ Function to generate selector name in option from v
+selectList1 :: (FromJSVal k, Show k, Ord k, Eq v)
+            => Map.Map k v -- ^ Map from strings (displayed in the menu) to values
+            -> ((k, v) -> JSString) -- ^ Function to generate selector name in option
+            -> ((k, v) -> JSString) -- ^ Function to generate selector value in option
             -> (v -> Message ()) -- ^ Selection handler, given the value associated with the selected string
             -> [Property] -- ^ Extra properties for the select element
             -> Maybe v -- ^ Default selection
             -> LiveVDom
-selectList1 kvMap optionFunc messageFunc props mSelected =
+selectList1 kvMap optionFunc valFunc messageFunc props mSelected =
     (flip addProps) props
   $ addEvents [ (inputChange $ \str -> runMessages $ lookupKey str), (keydown $ \str -> runMessages $ lookupKey str)]
   $ LiveVNode [] "select" Nothing []
-  $ fmap (\t@(k,v) -> option' (Just v == mSelected) k (optionFunc t)) (S.fromList $ Map.toList kvMap)
+  $ fmap (\t@(_,v) -> option' (Just v == mSelected) (valFunc t) (optionFunc t)) (S.fromList $ Map.toList kvMap)
   where lookupKey s = case Map.lookup s kvMap of
                         (Nothing) -> debug $ "Error looking up " ++ (show s)
                         (Just val) -> messageFunc val
