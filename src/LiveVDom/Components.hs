@@ -230,10 +230,17 @@ selectList1 kvMap optionFunc valFunc messageFunc props mSelected =
     (flip addProps) props
   $ addEvents [ (inputChange $ \str -> runMessages $ lookupKey str), (keydown $ \str -> runMessages $ lookupKey str)]
   $ LiveVNode [] "select" Nothing []
-  $ fmap (\t@(_,v) -> option' (Just v == mSelected) (valFunc t) (optionFunc t)) (S.fromList $ Map.toList kvMap)
+  $ options
   where lookupKey s = case Map.lookup s kvMap of
                         (Nothing) -> debug $ "Error looking up " ++ (show s)
                         (Just val) -> messageFunc val
+        pleaseSelect = do
+          let noDefault = case mSelected of
+                              Nothing -> True
+                              Just _ -> False
+          LiveVNode [] "option" Nothing [Property "selected" $ JSPBool noDefault, Property "disabled" $ JSPBool True] $ S.fromList [StaticText [] "Please Select"]
+        items = fmap (\t@(_,v) -> option' (Just v == mSelected) (valFunc t) (optionFunc t)) (S.fromList $ Map.toList kvMap)
+        options = pleaseSelect S.<| items
 
 
 

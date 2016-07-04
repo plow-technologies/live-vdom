@@ -1,11 +1,11 @@
 Name:                   live-vdom
-Version:                0.2.3
+Version:                0.2.4
 Author:                 Scott <scottmurphy09@gmail.com>
 Maintainer:             Scott <scottmurphy09@gmail.com>
 License:                MIT
 License-File:           LICENSE
--- Synopsis:               
--- Description:            
+-- Synopsis:
+-- Description:
 Cabal-Version:          >= 1.10
 Build-Type:             Simple
 
@@ -42,4 +42,4 @@ Library
 
 Source-Repository head
   Type:                 git
---  Location:             
+--  Location:
