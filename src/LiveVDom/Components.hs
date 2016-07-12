@@ -129,10 +129,9 @@ keyup f = EV.keyup $ \ev -> do
     Nothing -> putStrLn "keyup fail"
 
 scrollCheck :: JSString -> IO () -> Attribute
-scrollCheck elementId scrollFunction = EV.scroll $ \_ -> do
+scrollCheck elementId infiniteScrollFunction = EV.scroll $ \_ -> do
   isBottom <- checkScroll elementId
-  putStrLn $ "scroll check in live vdom" ++ show isBottom
-  when isBottom scrollFunction
+  when isBottom infiniteScrollFunction
 
 foreign import javascript unsafe "(function () {\
 \    var element = document.getElementById($1);\
