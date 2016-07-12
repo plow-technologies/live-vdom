@@ -28,6 +28,7 @@ module LiveVDom.Components
   , forEach
   , spanWith
   , withMailbox
+  , scrollBoxWith
   ) where
 
 import           Control.Concurrent.STM.Notify
@@ -127,8 +128,36 @@ keyup f = EV.keyup $ \ev -> do
     (Just v) -> f v
     Nothing -> putStrLn "keyup fail"
 
+scrollCheck :: JSString -> IO () -> Attribute
+scrollCheck elementId scrollFunction = EV.scroll $ \_ -> do
+  isBottom <- checkScroll elementId
+  putStrLn $ "scroll check in live vdom" ++ show isBottom
+  when isBottom scrollFunction
+
+foreign import javascript unsafe "(function () {\
+\    var element = document.getElementById($1);\
+\    if (element) {\
+\      if (element.scrollHeight - element.scrollTop === element.clientHeight)\
+\      {\
+\          return true;\
+\      }\
+\      else {\
+\        return false;\
+\     }\
+\   }\
+\   }\
+\  ())"
+  checkScroll :: JSString -> IO Bool
 
 -- Components
+-- | a div element that calls the IO () function in the case of a scrollbox hitting the bottom.
+--   Used to implement infinite scroll
+scrollBoxWith :: IO () -> JSString -> [Property] -> S.Seq LiveVDom -> LiveVDom
+scrollBoxWith scrollFunction elementId props children =
+ flip addProps props $ addEvent (scrollCheck elementId scrollFunction) tb
+  where
+    tb = LiveVNode [] "div" Nothing [Property "id" (JSPString elementId)] children
+
 -- | A basic button component with the default of accepting an STM Address
 button :: Address (Event ()) -> [Property] -> JSString -> LiveVDom
 button addr = buttonWith $ sendMessage addr $ Fired ()
