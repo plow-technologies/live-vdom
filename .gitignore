@@ -1,3 +1,4 @@
+.stack-work
 dist
 cabal-dev
 *.o
@@ -10,3 +11,4 @@ cabal-dev
 cabal.sandbox.config
 add.sh
 *.*~
+/TAGS
