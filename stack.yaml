@@ -24,7 +24,7 @@ packages:
   extra-dep: true
 - location:
     git: git@github.com:plow-technologies/ghcjs-vdom.git
-    commit: a9d8073be232ac39c1542957ff7e9d6c877b4188
+    commit: 4bab395f9454383962ad86f1d00334b63ee8acee
   extra-dep: true
 
 extra-deps:
