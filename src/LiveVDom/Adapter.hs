@@ -73,15 +73,23 @@ instance ToJSVal PropList where
         return obj
 
 
+
+
+
+--------------------------------------------------
 mkVNode :: LiveVDom Attribute -> IO [VD.VNode]
 mkVNode (LiveVText ev !t) = ((:[]) . E.text) <$> recvIO t
 mkVNode (StaticText ev !t) = return [E.text t]
 mkVNode (LiveVNode ev !tname !namespace !propsList !children) = do
-  !children' <- Data.Foldable.msum <$> traverse mkVNode children :: IO [VD.VNode]
+  !children' <- Data.Foldable.msum <$> traverse mkVNode children :: IO [VD.VNode] 
   let attrs = mkAttributeFromList "attributes" $ buildProperties propsList
       attrList = attrs:ev
+      properties
+          |tname == "input" = (buildProperties propsList)  ++ attrList
+          |otherwise        = attrList
+      passableLst = mkAttributes properties
       customAndNamespace = maybe E.custom (const E.customSVG) $ namespace
-  return . (:[]) $ customAndNamespace (JSTR.pack tname) attrList $ mkChildren $ children'
+  return . (:[]) $ customAndNamespace (JSTR.pack tname) properties $ mkChildren $ children'
 mkVNode (LiveChild ev !ivc) = do
   !vc <- recvIO ivc
   mkVNode $ addEvents ev vc

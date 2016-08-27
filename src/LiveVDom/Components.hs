@@ -90,6 +90,14 @@ inputChange f = EV.change $ \ev -> do
     (Just v) -> f v
     Nothing -> putStrLn "input fail"
 
+input :: (FromJSVal b) => (b -> IO()) -> Attribute
+input f = EV.input $ \ev -> do
+  mVal <- getCurrentValue $ unsafeCoerce ev
+  case mVal of 
+   (Just v) -> f v
+   Nothing -> putStrLn "input fail"
+
+
 keypress :: (FromJSVal b) => (b -> IO()) -> Attribute
 keypress f = EV.keypress $ \ev -> do
   mVal <- getCurrentValue $ unsafeCoerce ev
@@ -194,39 +202,44 @@ textBox addr = textBoxWith $ \str -> sendMessage addr $ Fired str
 -- | A textbox that allows you to send non-blocking messages with the Message
 -- monad whenever the input changes
 textBoxWith :: (JSString -> Message b) -> [Property] -> Maybe JSString -> LiveVDom
-textBoxWith f props mStr = (flip addProps) props $ addKeyPress $ addKeyUp tb
+textBoxWith f props mStr = (flip addProps) props $ addInput $ addKeyPress $ addKeyUp tb
   where
     tb = LiveVNode [] "input" Nothing
                    ([Property "type" $ JSPString "text"])
                    S.empty
-    addKeyPress = addEvent (keypress $ \str -> void . runMessages $ f str)
-    addKeyUp = addEvent (keyup $ \str -> void . runMessages $ f str)
-
+    addKeyPress    = addEvent (keypress $ \str -> void . runMessages $ f str)
+    addKeyUp       = addEvent (keyup $ \str -> void . runMessages $ f str)
+    addInput = addEvent (input $ \str -> void . runMessages $ f str)
 inputWith :: (JSString -> Message b) -> [Property] -> Maybe JSString -> LiveVDom
-inputWith f props mStr = (flip addProps) props $ addKeyPress $ addKeyUp tb
+inputWith f props mStr = (flip addProps) props $ addInput $ addKeyPress $ addKeyUp tb
   where
     tb = LiveVNode [] "input" Nothing [] S.empty
+    addInput = addEvent (input $ \str -> void . runMessages $ f str)
     addKeyPress = addEvent (keypress $ \str -> void . runMessages $ f str)
     addKeyUp = addEvent (keyup $ \str -> void . runMessages $ f str)
 
 -- | The same as a textbox with string but it parses the string to a number and
 -- has type="numberBox"
 numberBox :: Address (Event Int) -> LiveVDom
-numberBox addr = addEvent (inputChange $ \str -> void . Data.Traversable.sequence $ sendIO addr <$> Fired <$> (readMaybe str)) tb
+numberBox addr = addInput $ addEvent (inputChange f ) tb
   where tb = LiveVNode [] "input" Nothing [Property "type" $ JSPString "text"] S.empty
-
-
+        addInput = addEvent (input $ f)
+        f = \str -> void . Data.Traversable.sequence $ sendIO addr <$> Fired <$> (readMaybe str)
 -- | The same as a textbox with string but it parses the string to a number and
 -- has type="numberBox"
 numberBoxWith :: (Event Int -> Message b) -> LiveVDom
-numberBoxWith f = addEvent (inputChange $ \str -> void . runMessages . f . maybeToEvent $ readMaybe str) tb
+numberBoxWith f = addInput $ addEvent (inputChange $ runWithFunction ) tb
   where tb = LiveVNode [] "input" Nothing [Property "type" $ JSPString "number"] S.empty
         maybeToEvent (Nothing) = Unfired
         maybeToEvent (Just e) = Fired e
+        runWithFunction = \str -> void . runMessages . f . maybeToEvent $ readMaybe str
+        addInput = addEvent (input runWithFunction)
+
 
 doubleBoxWith :: (Double -> Message b) -> [Property] -> Maybe JSString -> LiveVDom
-doubleBoxWith f props mStr = (flip addProps) props $ addEvent (keypress $ \str -> void . runMessages $ f str) tb
+doubleBoxWith f props mStr = (flip addProps) props $ addInput $  addEvent (keypress $ \str -> void . runMessages $ f str) tb
   where
+    addInput = addEvent (input $ \str -> void . runMessages $ f str)
     tb = LiveVNode [] "input" Nothing
                    (maybe id ((:) . Property "value" . JSPString) mStr
                      [Property "type" $ JSPString "number"])
