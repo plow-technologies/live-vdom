@@ -202,14 +202,13 @@ textBox addr = textBoxWith $ \str -> sendMessage addr $ Fired str
 -- | A textbox that allows you to send non-blocking messages with the Message
 -- monad whenever the input changes
 textBoxWith :: (JSString -> Message b) -> [Property] -> Maybe JSString -> LiveVDom
-textBoxWith f props mStr = (flip addProps) props $ addInput $ addKeyPress $ addKeyUp tb
+textBoxWith f props mStr = flip addProps props $ addInput tb
   where
     tb = LiveVNode [] "input" Nothing
                    ([Property "type" $ JSPString "text"])
                    S.empty
-    addKeyPress    = addEvent (keypress $ \str -> void . runMessages $ f str)
-    addKeyUp       = addEvent (keyup $ \str -> void . runMessages $ f str)
     addInput = addEvent (input $ \str -> void . runMessages $ f str)
+    
 inputWith :: (JSString -> Message b) -> [Property] -> Maybe JSString -> LiveVDom
 inputWith f props mStr = (flip addProps) props $ addInput $ addKeyPress $ addKeyUp tb
   where
