@@ -26,6 +26,7 @@ module LiveVDom.Components
   , selectList1
   , selectListWith
   , forEach
+  , forEachIn
   , spanWith
   , withMailbox
   , scrollBoxWith
@@ -93,7 +94,7 @@ inputChange f = EV.change $ \ev -> do
 input :: (FromJSVal b) => (b -> IO()) -> Attribute
 input f = EV.input $ \ev -> do
   mVal <- getCurrentValue $ unsafeCoerce ev
-  case mVal of 
+  case mVal of
    (Just v) -> f v
    Nothing -> putStrLn "input fail"
 
@@ -332,6 +333,58 @@ forEach mb func = (fmap buildDom) <$> withIndices
         remove i ts = appendL  $ S.viewl <$> S.splitAt i ts
         appendL (xs,(_ S.:< ys)) = xs S.>< ys
         appendL (xs,_) = xs
+
+
+-- | Apply "loop" to a specific record field
+--
+-- The difference between this and 'forEach' is that 'forEach' focuses the "loop"
+-- on a mailbox sequence. There are times that your sequence/list is wrapped within a type.
+-- Then, this is useful for that case.
+--
+-- Example:
+--
+-- data Classroom = Classroom { name :: String, students :: Seq Student }
+--
+-- With 'forEach', to iterate `students`, you would have to have something like `STMMailbox (Seq Student)`.
+-- However, this is not possible because you can't  transform 'STMMailbox Classroom to 'STMMailbox (Seq Student)
+-- by doing 'students <$> (example :: STMMailbox Classroom)' because 'Address' is not a functor.
+-- Remember, STMMailbox Classroom = (STMEnvelope Classroom, Address Classroom)
+forEachIn :: forall a b. STMMailbox a                      -- ^ Mailbox
+          -> (a -> S.Seq b)                                -- ^ function to focus'a' into 'Seq b'
+          -> (a -> S.Seq b -> a)                           -- ^ function to build new 'a' given 'Seq b', use to merge changes
+          -> (b -> (Maybe b -> Message ()) -> LiveVDom)    -- ^ function to generate dom given an element and a function to change the current value
+          -> STMEnvelope (S.Seq LiveVDom)
+forEachIn mb@(stmEnv, _) convSeq convObj func = (fmap buildDom) <$> itemsWithIdx
+  where
+    itemsWithIdx :: STMEnvelope (S.Seq (Int, b))
+    itemsWithIdx = withIndices <$> convSeq <$> stmEnv
+
+    withIndices :: S.Seq b -> S.Seq (Int, b)
+    withIndices xs = S.zip (seqIndexList xs) xs
+
+    seqIndexList :: S.Seq b -> S.Seq Int
+    seqIndexList = increasingSeq . S.length
+
+    increasingSeq :: Int -> S.Seq Int
+    increasingSeq = S.fromList . ((flip take) [0,1..])
+
+    updateSeq :: Int -> b -> S.Seq b -> S.Seq b
+    updateSeq idx newVal = S.update idx newVal
+
+    buildDom :: (Int, b) -> LiveVDom
+    buildDom (idx, val) = func val (updateValue idx)
+
+    updateValue :: Int -> Maybe b -> Message ()
+    updateValue idx (Just newVal) = modifyMailbox mb (\a -> convObj a $ updateSeq idx newVal (convSeq a))
+    updateValue idx _             = modifyMailbox mb (\a -> convObj a $ remove idx (convSeq a))
+
+    remove :: Int -> S.Seq b -> S.Seq b
+    remove i ts = appendL  $ S.viewl <$> S.splitAt i ts
+
+    appendL :: (S.Seq b, S.ViewL b) -> S.Seq b
+    appendL (xs,(_ S.:< ys)) = xs S.>< ys
+    appendL (xs,_          ) = xs
+
 
 -- | A little wrapper around the applicative instance
 -- on STMEnvelope but allows for updating the current value
