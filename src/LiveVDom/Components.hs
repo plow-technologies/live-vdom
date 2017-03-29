@@ -1,7 +1,8 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuasiQuotes       #-}
-{-# LANGUAGE TypeFamilies      #-}
-{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE QuasiQuotes         #-}
+{-# LANGUAGE TypeFamilies        #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module LiveVDom.Components
   ( Attribute
@@ -29,6 +30,7 @@ module LiveVDom.Components
   , selectListWith
   , forEach
   , forEachIn
+  , forEachInWithIndex
   , spanWith
   , withMailbox
   , scrollBoxWith
@@ -409,11 +411,11 @@ forEach mb func = toDesc $ (fmap buildDom) <$> withIndices
 -- However, this is not possible because you can't  transform 'STMMailbox Classroom to 'STMMailbox (Seq Student)
 -- by doing 'students <$> (example :: STMMailbox Classroom)' because 'Address' is not a functor.
 -- Remember, STMMailbox Classroom = (STMEnvelope Classroom, Address Classroom)
-forEachIn :: forall a b. STMMailbox a                      -- ^ Mailbox
-          -> (a -> S.Seq b)                                -- ^ function to focus'a' into 'Seq b'
-          -> (a -> S.Seq b -> a)                           -- ^ function to build new 'a' given 'Seq b', use to merge changes
-          -> (b -> (Maybe b -> Message ()) -> LiveVDom)    -- ^ function to generate dom given an element and a function to change the current value
-          -> STMEnvelope (S.Seq LiveVDom)
+forEachIn :: forall a b. STMMailbox a                   -- ^ Mailbox
+          -> (a -> S.Seq b)                                -- ^ function to extract the 'Foldable' part of 'a' into 'Seq b'
+          -> (a -> S.Seq b -> a)                           -- ^ function to "merge" 'Seq b' into its original 'a'
+          -> (b -> (Maybe b -> Message ()) -> Desc Identity ())    -- ^ function to generate dom given an element and a function to change the current value
+          -> STMEnvelope (S.Seq (Desc Identity ()))
 forEachIn mb@(stmEnv, _) convSeq convObj func = (fmap buildDom) <$> itemsWithIdx
   where
     itemsWithIdx :: STMEnvelope (S.Seq (Int, b))
@@ -431,8 +433,47 @@ forEachIn mb@(stmEnv, _) convSeq convObj func = (fmap buildDom) <$> itemsWithIdx
     updateSeq :: Int -> b -> S.Seq b -> S.Seq b
     updateSeq idx newVal = S.update idx newVal
 
-    buildDom :: (Int, b) -> LiveVDom
+    buildDom :: (Int, b) -> Desc Identity ()
     buildDom (idx, val) = func val (updateValue idx)
+
+    updateValue :: Int -> Maybe b -> Message ()
+    updateValue idx (Just newVal) = modifyMailbox mb (\a -> convObj a $ updateSeq idx newVal (convSeq a))
+    updateValue idx _             = modifyMailbox mb (\a -> convObj a $ remove idx (convSeq a))
+
+    remove :: Int -> S.Seq b -> S.Seq b
+    remove i ts = appendL  $ S.viewl <$> S.splitAt i ts
+
+    appendL :: (S.Seq b, S.ViewL b) -> S.Seq b
+    appendL (xs,(_ S.:< ys)) = xs S.>< ys
+    appendL (xs,_          ) = xs
+
+
+-- | Same as `forEachIn` but with index
+forEachInWithIndex
+  :: forall a b. STMMailbox a
+  -> (a -> S.Seq b)
+  -> (a -> S.Seq b -> a)
+  -> (Int -> b -> (Maybe b -> Message ()) -> Desc Identity ())
+  -> STMEnvelope (S.Seq (Desc Identity ()))
+forEachInWithIndex mb@(stmEnv, _) convSeq convObj func = (fmap buildDom) <$> itemsWithIdx
+  where
+    itemsWithIdx :: STMEnvelope (S.Seq (Int, b))
+    itemsWithIdx = withIndices <$> convSeq <$> stmEnv
+
+    withIndices :: S.Seq b -> S.Seq (Int, b)
+    withIndices xs = S.zip (seqIndexList xs) xs
+
+    seqIndexList :: S.Seq b -> S.Seq Int
+    seqIndexList = increasingSeq . S.length
+
+    increasingSeq :: Int -> S.Seq Int
+    increasingSeq = S.fromList . ((flip take) [0,1..])
+
+    updateSeq :: Int -> b -> S.Seq b -> S.Seq b
+    updateSeq idx newVal = S.update idx newVal
+
+    buildDom :: (Int, b) -> Desc Identity ()
+    buildDom (idx, val) = func idx val (updateValue idx)
 
     updateValue :: Int -> Maybe b -> Message ()
     updateValue idx (Just newVal) = modifyMailbox mb (\a -> convObj a $ updateSeq idx newVal (convSeq a))
