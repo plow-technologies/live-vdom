@@ -79,7 +79,7 @@ Which means if you make a stack of verticle elements you must feed it to a paren
 
 |-}
 
-(<<>>) :: (LiveVDom a) -> LiveVDom a -> LiveVDom a
+(<<>>) :: LiveVDom -> LiveVDom -> LiveVDom
 (<<>>) vdomT vdomB = case vdomT of
                           (StaticText [] "")  -> vdomB -- memtpy law RHS
                           txt@(LiveVText _ _ )  -> txt

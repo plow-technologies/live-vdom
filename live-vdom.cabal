@@ -1,5 +1,5 @@
 Name:                   live-vdom
-Version:                0.2.4
+Version:                1.0.0
 Author:                 Scott <scottmurphy09@gmail.com>
 Maintainer:             Scott <scottmurphy09@gmail.com>
 License:                MIT
@@ -22,6 +22,7 @@ Library
                         LiveVDom.Message
                         LiveVDom.Render
                         LiveVDom.Types
+                        LiveVDom.TH
                         LiveVDom.UserTypes
                         LiveVDom.Combinators
   Other-Modules:        LiveVDom.Internal
@@ -39,6 +40,8 @@ Library
                       , th-lift-instances
                       , ghcjs-prim
                       , mtl
+                      , free
+                      , transformers
 
 Source-Repository head
   Type:                 git

@@ -7,22 +7,11 @@
 module LiveVDom.Adapter.Types where
 
 
-import           Control.Applicative
-import           Data.Text
-import           Data.Typeable
-
-import           Instances.TH.Lift
+import           Instances.TH.Lift ()
 import           Language.Haskell.TH.Syntax
 
-import           GHCJS.Marshal
 import           GHCJS.Types
-
-import           GHCJS.VDOM.Attribute
-import qualified GHCJS.VDOM.Event           as EV
-
---ghcjs-base
-import           Data.JSString              (JSString)
-import qualified Data.JSString              as JS (pack, unpack)
+import qualified Data.JSString              as JS
 
 -- | A javascript property like 'input=value'
 -- or even 'ng-click="function()"'
@@ -33,7 +22,8 @@ data Property = Property {
 
 
 instance Lift Property where
-  lift (Property pName pVal) = AppE <$> (AppE (ConE 'Property) <$> (lift . JS.unpack $ pName)) <*> (lift pVal)
+  lift (Property pName pVal) =
+    AppE <$> (AppE (ConE 'Property) <$> (lift . JS.unpack $ pName)) <*> (lift pVal)
 
 
 type TagName = String
@@ -74,6 +64,9 @@ instance IsJSProp Double where
 instance IsJSProp JSString where
     toJSProp = JSPString
 
+instance IsJSProp JSProp where
+    toJSProp = id
+
 
 -- | Build a property from a name and value
 buildProp :: IsJSProp a =>
@@ -81,3 +74,11 @@ buildProp :: IsJSProp a =>
              -> a         -- ^ Property value
              -> Property
 buildProp name prop = Property name $ toJSProp prop
+
+(.=.) :: IsJSProp a =>
+         JSString
+      -> a
+      -> Property
+(.=.) = buildProp
+
+infixr 8 .=.

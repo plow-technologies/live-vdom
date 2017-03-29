@@ -20,20 +20,15 @@ module LiveVDom.Render (
 
 
 import           Control.Monad
-import qualified Data.Sequence                 as S
 import           Prelude                       hiding (div)
 
 
-import           GHCJS.Foreign
 import           GHCJS.Foreign.QQ
-import           GHCJS.Types
 import           GHCJS.VDOM
 
 
-import           Control.Concurrent
 import           Control.Concurrent.STM.Notify
-import           LiveVDom.Adapter              (debugDom, mkVNode)
-import qualified LiveVDom.Adapter.Types        as VDA
+import           LiveVDom.Adapter              (mkVNode)
 
 import           GHCJS.Foreign.Callback
 import           GHCJS.VDOM.Element
@@ -42,46 +37,46 @@ import           JavaScript.Web.AnimationFrame (inAnimationFrame)
 import           LiveVDom.Types                hiding (LiveVDom)
 import           LiveVDom.UserTypes
 
-
--- Hopefully this can eventually be taken out
-import           Unsafe.Coerce
-
-
-import           Data.JSString                 (pack)
-import qualified GHCJS.VDOM.Element            as E
+import LiveVDom.Internal
 
 -- | Run dom (not forked) forever. This receives the current dom
 -- and then renders it again each time it changes
 runDomI :: DOMNode -- ^ Container to render the dom in
-        -> IO ()   -- ^ Action to run after the FIRST render
-        -> STMEnvelope LiveVDom -- ^ dom to run and watch for changes
+        -> IO ()   -- ^ Action to run after the first render
+        -> Elem IO -- ^ dom to run and watch for changes
         -> IO ()
-runDomI container postRun envLD = do
+runDomI container postRun element = do
   EV.initEventDelegation EV.defaultEvents -- need this for events to work
-  vdm <- recvIO envLD
+  (vdm, _) <- renderElement element
   vmount <- mount container $ div () ()
   vn' <- renderDom vmount vdm          -- Render the initial dom
   _ <- inAnimationFrame ContinueAsync (\_ -> postRun)
-  foldOnChangeWith waitForDom envLD (\_ v -> renderDom vmount v) vn'    -- pass the rendered dom into the fold that
+  foldOnChangeWith waitForDom (return vdm) (\_ v -> renderDom vmount v) vn'    -- pass the rendered dom into the fold that
                                                               -- renders the dom when it changes
 
 -- | Run the dom inside a container that
 runDom :: DOMNode
       -> IO ()
-      -> LiveVDom
+      -> Elem Identity
       -> IO ()
-runDom c fi e = runDomI c fi $ return e
+runDom container postRun element = do
+  EV.initEventDelegation EV.defaultEvents
+  let (vdm, _) = runIdentity $ renderElement element
+  vmount <- mount container $ div () ()
+  vn' <- renderDom vmount vdm
+  _ <- inAnimationFrame ContinueAsync (\_ -> postRun)
+  foldOnChangeWith waitForDom (return vdm) (\_ v -> renderDom vmount v) vn'    -- pass the rendered dom into the fold that
 
 -- | Given a container, the last rendering, and a current rendering,
 -- diff the new rendering from the old and return the new model of the dom
 renderDom :: VMount -> LiveVDom -> IO ()
-renderDom mount !ld = do
+renderDom vMount !ld = do
   !vns <- mkVNode ld
   !new <- case vns of
             (x:[]) -> return x
             _ -> fail "Having more than one node as the parent is illegal"
-  !pa <- diff mount new
-  _ <- patch mount pa
+  !pa <- diff vMount new
+  _ <- patch vMount pa
   putStrLn "Rendered"
   return ()
 

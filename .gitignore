@@ -11,4 +11,5 @@ cabal-dev
 cabal.sandbox.config
 add.sh
 *.*~
+.stack-work/
 /TAGS
