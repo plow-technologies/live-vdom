@@ -34,6 +34,7 @@ module LiveVDom.Internal (
   , liveVNode
   , liveChild
   , liveChildren
+  , liftElem
 ) where
 
 import           Control.Concurrent.STM.Notify
