@@ -134,7 +134,7 @@ addEvents ev (LiveVText evs ch) = LiveVText (evs ++ ev) ch -- Child text with  n
 addEvents ev (StaticText evs ch) = StaticText (evs ++ ev) ch -- Child text with  no tag name, properties, or children
 addEvents ev (LiveVNode evs tn ns pls ch) = LiveVNode (evs ++ ev) tn ns pls ch -- Basic tree structor for a node with children and properties
 addEvents ev (LiveChild evs vch) = LiveChild (evs ++ ev) vch -- DOM that can change
-addEvents ev (LiveChildren evs vchs) = error "LiveVDom.Types: addEvents, This shouldn't be used. Please report this as a bug" -- LiveChildren (evs ++ ev) vchs
+addEvents ev (LiveChildren evs vchs) = LiveChildren (evs ++ ev) vchs
 
 -- | Add a list of property to LiveVNode if it is a liveVNode
 -- If it isn't it leaves the rest alone
