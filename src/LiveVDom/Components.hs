@@ -146,19 +146,21 @@ scrollCheck elementId infiniteScrollFunction = EV.scroll $ \_ -> do
 -- This was changed from the original version
 -- but it is assumed that if the element is null
 -- the result should be false.
-checkScroll :: JSString -> IO Bool
-checkScroll elemId = [js|
-  var element = document.getElementById(`elemId);
-  if (element) {
-    if (element.scrollHeight - element.scrollTop === element.clientHeight) {
-      return true;
-    }
-    else {
-      return false;
-    }
-  }
-  return false;
-|]
+--checkScroll function
+foreign import javascript unsafe "(function () {\
+\  var element = document.getElementById($1);\
+\  if (element) {\
+\    if (element.scrollHeight - element.scrollTop === element.clientHeight) {\
+\      return true;\
+\    }\
+\    else {\
+\      return false;\
+\    }\
+\  }\
+\  return false;\
+\  }\
+\  ())"
+  checkScroll :: JSString -> IO Bool
 
 -- Components
 -- | a div element that calls the IO () function in the case of
