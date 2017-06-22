@@ -146,11 +146,11 @@ scrollCheck elementId infiniteScrollFunction = EV.scroll $ \_ -> do
 -- This was changed from the original version
 -- but it is assumed that if the element is null
 -- the result should be false.
---checkScroll function
+-- It checks to see if the scroll bar on a given element is within 1 pixel from the bottom
 foreign import javascript unsafe "(function () {\
 \  var element = document.getElementById($1);\
 \  if (element) {\
-\    if (element.scrollHeight - element.scrollTop === element.clientHeight) {\
+\    if (element.scrollHeight - element.scrollTop - element.clientHeight <= 1) {\
 \      return true;\
 \    }\
 \    else {\
